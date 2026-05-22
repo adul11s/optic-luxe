@@ -18,7 +18,8 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
+  Warehouse,
+  Store,
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 
@@ -32,6 +33,8 @@ interface NavItem {
 const staffNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+  { label: "Warehouse", href: "/dashboard/warehouse", icon: Warehouse },
+  { label: "POS", href: "/dashboard/pos", icon: Store },
   { label: "Inventory", href: "/dashboard/inventory", icon: Package },
   { label: "Payments", href: "/dashboard/payments", icon: FileText },
   { label: "Shipments", href: "/dashboard/shipments", icon: Truck },

@@ -62,7 +62,56 @@ export async function getDashboard(req: Request, res: Response) {
   }
 }
 
-export async function getAnalytics(_req: Request, res: Response) {
+// ── Enhanced Analytics: Online vs Offline ──
+
+export async function getSalesAnalytics(req: Request, res: Response) {
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [onlineOrders, offlineOrders, onlineRevenue, offlineRevenue, todayOnline, todayOffline, monthlyOnline, monthlyOffline, inventoryStats] = await Promise.all([
+      prisma.order.count({ where: { isDeleted: false, saleChannel: 'ONLINE' } }),
+      prisma.offlineSale.count({ where: { isDeleted: false } }),
+      prisma.order.aggregate({ where: { isDeleted: false, status: { not: 'CANCELLED' }, saleChannel: 'ONLINE' }, _sum: { totalAmount: true } }),
+      prisma.offlineSale.aggregate({ where: { isDeleted: false }, _sum: { totalAmount: true } }),
+      prisma.order.aggregate({ where: { isDeleted: false, status: { not: 'CANCELLED' }, saleChannel: 'ONLINE', createdAt: { gte: today, lt: tomorrow } }, _sum: { totalAmount: true }, _count: true }),
+      prisma.offlineSale.aggregate({ where: { isDeleted: false, createdAt: { gte: today, lt: tomorrow } }, _sum: { totalAmount: true }, _count: true }),
+      prisma.order.aggregate({ where: { isDeleted: false, status: { not: 'CANCELLED' }, saleChannel: 'ONLINE', createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
+      prisma.offlineSale.aggregate({ where: { isDeleted: false, createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
+      prisma.productVariant.aggregate({ where: { isDeleted: false }, _sum: { stockQty: true }, _count: true }),
+    ]);
+
+    const topOnlineProducts = await prisma.orderItem.groupBy({ by: ['productId'], _sum: { quantity: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 5 });
+    const topOfflineProducts = await prisma.offlineSaleItem.groupBy({ by: ['productId'], _sum: { quantity: true }, orderBy: { _sum: { quantity: 'desc' } }, take: 5 });
+    const allTopIds = [...new Set([...topOnlineProducts.map(p => p.productId), ...topOfflineProducts.map(p => p.productId)])];
+    const productMap = new Map((await prisma.product.findMany({ where: { id: { in: allTopIds } }, select: { id: true, name: true, brand: true, images: { take: 1, where: { isPrimary: true } } } })).map(p => [p.id, p]));
+
+    const lowStockItems = await prisma.productVariant.count({ where: { isDeleted: false, stockQty: { lte: prisma.productVariant.fields.minStockQty } } });
+
+    sendSuccess(res, {
+      overview: {
+        totalOnlineOrders: onlineOrders,
+        totalOfflineOrders: offlineOrders,
+        totalOnlineRevenue: onlineRevenue._sum.totalAmount || 0,
+        totalOfflineRevenue: offlineRevenue._sum.totalAmount || 0,
+        totalRevenue: (onlineRevenue._sum.totalAmount || 0) + (offlineRevenue._sum.totalAmount || 0),
+      },
+      today: {
+        onlineOrders: todayOnline._count || 0, onlineRevenue: todayOnline._sum.totalAmount || 0,
+        offlineOrders: todayOffline._count || 0, offlineRevenue: todayOffline._sum.totalAmount || 0,
+      },
+      monthly: {
+        onlineRevenue: monthlyOnline._sum.totalAmount || 0, offlineRevenue: monthlyOffline._sum.totalAmount || 0,
+      },
+      inventory: { totalStock: inventoryStats._sum.stockQty || 0, totalVariants: inventoryStats._count, lowStockCount: lowStockItems },
+      topOnlineProducts: topOnlineProducts.map(p => ({ product: productMap.get(p.productId), totalSold: p._sum.quantity })),
+      topOfflineProducts: topOfflineProducts.map(p => ({ product: productMap.get(p.productId), totalSold: p._sum.quantity })),
+    });
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
+  }
+}export async function getAnalytics(_req: Request, res: Response) {
   try {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

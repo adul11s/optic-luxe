@@ -13,6 +13,8 @@ import reviewRouter from './modules/review/review.routes.js';
 import wishlistRouter from './modules/wishlist/wishlist.routes.js';
 import dashboardRouter from './modules/dashboard/dashboard.routes.js';
 import addressRouter from './modules/address/address.routes.js';
+import warehouseRouter from './modules/warehouse/warehouse.routes.js';
+import posRouter from './modules/pos/pos.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -53,6 +55,8 @@ app.use('/api/users', userRouter);
 app.use('/api/wishlist', wishlistRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/addresses', addressRouter);
+app.use('/api/warehouse', warehouseRouter);
+app.use('/api/pos', posRouter);
 
 app.use(errorHandler);
 
