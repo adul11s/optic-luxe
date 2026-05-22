@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -12,10 +12,16 @@ export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, router]);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -28,7 +34,6 @@ export default function LoginPage() {
 
     try {
       await login(formData.email, formData.password);
-      router.push("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid email or password");
     } finally {
