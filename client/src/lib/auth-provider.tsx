@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { User, AuthResponse } from "@/types";
+import type { User } from "@/types";
 import { api } from "@/lib/api";
 
 interface AuthContextType {
