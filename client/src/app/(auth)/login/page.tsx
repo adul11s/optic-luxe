@@ -1,27 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui";
-import { useAuth } from "@/lib/auth-provider";
+import { api } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login, isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/dashboard");
-    }
-  }, [isAuthenticated, router]);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,10 +24,13 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      const response = await api.post("/auth/login", formData);
+      const { user, token } = response.data.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      window.location.href = "/dashboard";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid email or password");
-    } finally {
       setIsLoading(false);
     }
   };
