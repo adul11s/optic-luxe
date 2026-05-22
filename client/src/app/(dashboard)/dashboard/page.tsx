@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -19,6 +18,8 @@ import { formatPrice, formatOrderStatus, formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-provider";
 import Link from "next/link";
 import type { Order, DashboardStats } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },

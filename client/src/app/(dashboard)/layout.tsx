@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 
+export const dynamic = "force-dynamic";
+
 interface NavItem {
   label: string;
   href: string;
@@ -60,19 +62,27 @@ const customerNav: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, isHydrated } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (isHydrated && !user) {
       router.push("/login");
     }
-  }, [isLoading, user, router]);
+  }, [isHydrated, user, router]);
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-brand-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-brand-950 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center">
+        <p className="text-brand-500">Redirecting to login...</p>
       </div>
     );
   }

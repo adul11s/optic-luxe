@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,6 +7,8 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui";
 import { useAuth } from "@/lib/auth-provider";
+
+export const dynamic = "force-dynamic";
 
 export default function RegisterPage() {
   const router = useRouter();

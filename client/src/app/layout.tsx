@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Providers } from "./providers";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Optic Luxe | Premium Eyewear",
   description: "Discover premium eyewear that defines your style. Shop the finest collection of frames and sunglasses.",

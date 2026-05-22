@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +8,8 @@ import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Mod
 import { api } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { User, Role } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
