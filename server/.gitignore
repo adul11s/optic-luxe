@@ -1,0 +1,41 @@
+# Dependencies
+client/node_modules/
+server/node_modules/
+
+# Build outputs
+client/dist/
+server/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+vite.log
+
+# Database
+*.db
+*.db-journal
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+client/*.local
+
+# Prisma
+server/prisma/dev.db
+server/prisma/dev.db-journal
