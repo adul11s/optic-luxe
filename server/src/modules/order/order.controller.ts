@@ -2,34 +2,52 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
 import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 import { generateOrderNumber } from '../../core/utils/slug.js';
+import { reserveStock, releaseReservation, batchCheckStock } from '../../core/services/inventory.service.js';
+import { InsufficientStockError, ConcurrentUpdateError } from '../../core/services/inventory.service.js';
 
 export async function createOrder(req: Request, res: Response) {
   try {
     const { addressId, shippingMethod, shippingName, shippingPhone, shippingAddress, shippingCity, shippingProvince, shippingPostal, notes } = req.body;
 
-    // Get cart
     const cart = await prisma.cart.findUnique({
       where: { userId: req.user!.userId },
-      include: { items: { include: { product: true, variant: true } } },
+      include: { items: { where: { savedForLater: false }, include: { product: true, variant: true } } },
     });
     if (!cart || cart.items.length === 0) return sendError(res, 'Cart is empty', 400);
 
-    // Validate stock
+    const stockCheck = await batchCheckStock(
+      cart.items.filter((i) => i.variantId).map((i) => ({ variantId: i.variantId!, quantity: i.quantity }))
+    );
     for (const item of cart.items) {
-      if (item.variant && item.variant.stockQty < item.quantity) {
-        return sendError(res, `Insufficient stock for ${item.product.name}`, 400);
+      if (!item.variantId) continue;
+      const available = stockCheck.get(item.variantId) ?? 0;
+      if (available < item.quantity) {
+        return sendError(res, `Insufficient stock for ${item.product.name} (${item.variant?.colorName || ''}). Available: ${available}`, 400);
       }
     }
 
-    // Calculate totals
-    const subtotal = cart.items.reduce((sum, i) => sum + (i.product.discountPrice || i.product.basePrice) * i.quantity, 0);
+    const subtotal = cart.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const shippingCost = shippingMethod === 'EXPRESS' ? 25000 : 10000;
     const totalAmount = subtotal + shippingCost;
 
-    // Get address if addressId provided
     let addr = null;
     if (addressId) {
       addr = await prisma.address.findFirst({ where: { id: addressId, userId: req.user!.userId } });
+    }
+
+    try {
+      await reserveStock({
+        orderId: 'PENDING',
+        items: cart.items.filter((i) => i.variantId).map((i) => ({ variantId: i.variantId!, quantity: i.quantity })),
+      });
+    } catch (err) {
+      if (err instanceof ConcurrentUpdateError) {
+        return sendError(res, 'Stock was modified by another request. Please retry your order.', 409);
+      }
+      if (err instanceof InsufficientStockError) {
+        return sendError(res, err.message, 400);
+      }
+      throw err;
     }
 
     const order = await prisma.order.create({
@@ -49,19 +67,33 @@ export async function createOrder(req: Request, res: Response) {
         shippingMethod: shippingMethod || 'STANDARD',
         notes,
         items: {
-          create: cart.items.map(item => ({
+          create: cart.items.map((item) => ({
             productId: item.productId,
             variantId: item.variantId,
             quantity: item.quantity,
-            unitPrice: item.product.discountPrice || item.product.basePrice,
-            totalPrice: (item.product.discountPrice || item.product.basePrice) * item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.unitPrice * item.quantity,
           })),
         },
       },
-      include: { items: { include: { product: { include: { images: { where: { isPrimary: true }, take: 1 } } } } } },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+              },
+            },
+          },
+        },
+      },
     });
 
-    // Clear cart
+    await prisma.inventoryMovement.updateMany({
+      where: { referenceId: 'PENDING', type: 'SOLD_ONLINE' },
+      data: { reference: order.orderNumber, referenceId: order.id },
+    });
+
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
     return sendSuccess(res, order, 'Order created', 201);
@@ -85,7 +117,15 @@ export async function getOrders(req: Request, res: Response) {
       prisma.order.findMany({
         where,
         include: {
-          items: { include: { product: { include: { images: { where: { isPrimary: true }, take: 1 } } } } },
+          items: {
+            include: {
+              product: {
+                include: {
+                  images: { where: { isPrimary: true }, take: 1 },
+                },
+              },
+            },
+          },
           payment: true,
           shipment: true,
           invoice: true,
@@ -107,17 +147,25 @@ export async function getOrderById(req: Request, res: Response) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      include: {
-        items: { include: { product: { include: { images: true }, variant: true } } },
-        payment: true,
-        shipment: true,
-        invoice: true,
-        user: { select: { id: true, name: true, email: true, phone: true } },
-      },
-    });
-    if (!order || order.isDeleted) return sendError(res, 'Order not found', 404);
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  images: true,
+                },
+              },
+              variant: true,
+            },
+          },
+          payment: true,
+          shipment: true,
+          invoice: true,
+          user: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      });
+      if (!order || order.isDeleted) return sendError(res, 'Order not found', 404);
 
-    // Customers can only see their own orders
     if (req.user!.role === 'CUSTOMER' && order.userId !== req.user!.userId) {
       return sendError(res, 'Access denied', 403);
     }
@@ -133,22 +181,32 @@ export async function updateOrderStatus(req: Request, res: Response) {
     const validStatuses = ['PENDING', 'CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'COMPLETED', 'CANCELLED'];
     if (!validStatuses.includes(status)) return sendError(res, 'Invalid status', 400);
 
-    const order = await prisma.order.update({
+    const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      data: { status },
+      include: { items: true, payment: true },
+    });
+    if (!order) return sendError(res, 'Order not found', 404);
+
+    const previousStatus = order.status;
+    const updateData: any = { status };
+
+    if (status === 'COMPLETED') {
+      updateData.completedAt = new Date();
+    }
+
+    if (status === 'CANCELLED' && previousStatus !== 'CANCELLED') {
+      updateData.cancelledAt = new Date();
+      updateData.cancelledBy = req.user!.userId;
+      await releaseReservation(order.id, `Order ${order.orderNumber} cancelled by ${req.user!.role}`);
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: req.params.id },
+      data: updateData,
       include: { items: true, payment: true, shipment: true },
     });
 
-    // If cancelled, restore stock
-    if (status === 'CANCELLED') {
-      for (const item of order.items) {
-        if (item.variantId) {
-          await prisma.productVariant.update({ where: { id: item.variantId }, data: { stockQty: { increment: item.quantity } } });
-        }
-      }
-    }
-
-    return sendSuccess(res, order, 'Order status updated');
+    return sendSuccess(res, updated, `Order status updated to ${status}`);
   } catch (error: any) {
     return sendError(res, error.message, 500);
   }

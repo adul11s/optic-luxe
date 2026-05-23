@@ -15,6 +15,7 @@ import dashboardRouter from './modules/dashboard/dashboard.routes.js';
 import addressRouter from './modules/address/address.routes.js';
 import warehouseRouter from './modules/warehouse/warehouse.routes.js';
 import posRouter from './modules/pos/pos.routes.js';
+import refundRouter from './modules/refund/refund.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/addresses', addressRouter);
 app.use('/api/warehouse', warehouseRouter);
 app.use('/api/pos', posRouter);
+app.use('/api/refunds', refundRouter);
 
 app.use(errorHandler);
 

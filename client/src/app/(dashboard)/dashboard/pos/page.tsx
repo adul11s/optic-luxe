@@ -12,7 +12,7 @@ import {
   Badge, Input, Select, Table, TableColumn, StatCard,
   Modal, ModalHeader, ModalBody, ModalFooter,
 } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPost } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -42,21 +42,21 @@ export default function POSPage() {
 
   const { data: inventory } = useQuery({
     queryKey: ["pos", "inventory"],
-    queryFn: () => api.get<{ data: { items: any[] } }>("/warehouse/inventory"),
+    queryFn: () => authGet<{ data: { items: any[] } }>("/warehouse/inventory"),
   });
 
   const { data: sales } = useQuery({
     queryKey: ["pos", "sales"],
-    queryFn: () => api.get<{ data: { data: OfflineSale[]; pagination: any } }>("/pos/sales"),
+    queryFn: () => authGet<{ data: { data: OfflineSale[]; pagination: any } }>("/pos/sales"),
   });
 
   const { data: dashboard } = useQuery({
     queryKey: ["pos", "dashboard"],
-    queryFn: () => api.get<{ data: any }>("/pos/dashboard"),
+    queryFn: () => authGet<{ data: any }>("/pos/dashboard"),
   });
 
   const createSale = useMutation({
-    mutationFn: (data: any) => api.post("/pos/sale", data),
+    mutationFn: (data: any) => authPost("/pos/sale", data),
     onSuccess: (response: any) => {
       setLastSale(response.data.data);
       setShowReceipt(true);

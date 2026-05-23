@@ -1,4 +1,4 @@
-import prisma from '../core/database/prisma.js';
+import { prisma } from '../core/database/prisma.js';
 
 interface PatientFilters {
   search?: string;

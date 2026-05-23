@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, Plus, Edit2, Trash2, Shield, UserCheck, UserX } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPut, authDelete } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { User, Role } from "@/types";
 
@@ -27,19 +27,19 @@ export default function UsersPage() {
   const { data: usersData, isLoading } = useQuery({
     queryKey: ["users", page, roleFilter, search],
     queryFn: () =>
-      api.get<{ data: User[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/users", {
+      authGet<{ data: User[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/users", {
         params: { page, limit, role: roleFilter || undefined, search: search || undefined },
       }),
   });
 
   const updateUser = useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) =>
-      api.put(`/users/${userId}`, data),
+      authPut(`/users/${userId}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   const deleteUser = useMutation({
-    mutationFn: (userId: string) => api.delete(`/users/${userId}`),
+    mutationFn: (userId: string) => authDelete(`/users/${userId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 

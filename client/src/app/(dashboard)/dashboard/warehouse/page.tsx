@@ -12,7 +12,7 @@ import {
   Badge, Input, Select, Table, TableColumn, StatCard,
   Modal, ModalHeader, ModalBody, ModalFooter,
 } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPost } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -44,22 +44,22 @@ export default function WarehouseDashboardPage() {
 
   const { data: inventory } = useQuery({
     queryKey: ["warehouse", "inventory"],
-    queryFn: () => api.get<{ data: { overview: any; items: VariantItem[] } }>("/warehouse/inventory"),
+    queryFn: () => authGet<{ data: { overview: any; items: VariantItem[] } }>("/warehouse/inventory"),
   });
 
   const { data: alerts } = useQuery({
     queryKey: ["warehouse", "alerts"],
-    queryFn: () => api.get<{ data: AlertItem[] }>("/warehouse/alerts"),
+    queryFn: () => authGet<{ data: AlertItem[] }>("/warehouse/alerts"),
   });
 
   const { data: movements } = useQuery({
     queryKey: ["warehouse", "movements"],
-    queryFn: () => api.get<{ data: { data: MovementItem[]; pagination: any } }>("/warehouse/movements"),
+    queryFn: () => authGet<{ data: { data: MovementItem[]; pagination: any } }>("/warehouse/movements"),
   });
 
   const adjustStock = useMutation({
     mutationFn: (data: { variantId: string; quantity: number; type: string; notes?: string }) =>
-      api.post("/warehouse/stock/adjust", data),
+      authPost("/warehouse/stock/adjust", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setShowAdjustModal(false);

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Eye, Search, Filter, Download, Check, X } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPut } from "@/lib/api";
 import { formatPrice, formatOrderStatus, formatDate, formatPaymentStatus } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
 import Link from "next/link";
@@ -41,14 +41,14 @@ export default function OrdersPage() {
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["orders", page, statusFilter, search],
     queryFn: () =>
-      api.get<{ data: Order[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/orders", {
+      authGet<{ data: Order[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/orders", {
         params: { page, limit, status: statusFilter || undefined, search: search || undefined },
       }),
   });
 
   const updateStatus = useMutation({
     mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
-      api.put(`/orders/${orderId}/status`, { status }),
+      authPut(`/orders/${orderId}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setSelectedOrder(null);

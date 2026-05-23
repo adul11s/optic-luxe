@@ -11,7 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, StatCard, Badge } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { AnalyticsData } from "@/types";
 
@@ -25,13 +25,13 @@ const fadeInUp = {
 export default function AnalyticsPage() {
   const { data: analyticsResponse } = useQuery({
     queryKey: ["dashboard", "analytics"],
-    queryFn: () => api.get<{ data: AnalyticsData }>("/dashboard/analytics"),
+    queryFn: () => authGet<{ data: AnalyticsData }>("/dashboard/analytics"),
   });
 
   const data = analyticsResponse?.data as AnalyticsData | undefined;
 
   const monthlyRevenue = data?.monthlyRevenue || [];
-  const maxRevenue = Math.max(...monthlyRevenue.map((m) => m.revenue), 1);
+  const maxRevenue = monthlyRevenue.length > 0 ? Math.max(...monthlyRevenue.map((m) => m.revenue), 1) : 1;
 
   return (
     <motion.div

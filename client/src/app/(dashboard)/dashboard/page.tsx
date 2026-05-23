@@ -13,7 +13,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, StatCard, Table, TableColumn } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet } from "@/lib/api";
 import { formatPrice, formatOrderStatus, formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-provider";
 import Link from "next/link";
@@ -29,12 +29,12 @@ const fadeInUp = {
 function AdminDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => api.get<{ data: DashboardStats }>("/dashboard"),
+    queryFn: () => authGet<{ data: DashboardStats }>("/dashboard"),
   });
 
   const { data: recentOrders } = useQuery({
     queryKey: ["orders", "recent"],
-    queryFn: () => api.get<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
+    queryFn: () => authGet<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
   });
 
   const data = stats?.data?.data;
@@ -155,12 +155,12 @@ function AdminDashboard() {
 function StaffDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => api.get<{ data: DashboardStats }>("/dashboard"),
+    queryFn: () => authGet<{ data: DashboardStats }>("/dashboard"),
   });
 
   const { data: recentOrders } = useQuery({
     queryKey: ["orders", "recent"],
-    queryFn: () => api.get<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
+    queryFn: () => authGet<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
   });
 
   const data = stats?.data?.data;
@@ -259,7 +259,7 @@ function StaffDashboard() {
 function CustomerDashboard() {
   const { data: ordersData } = useQuery({
     queryKey: ["orders", "my"],
-    queryFn: () => api.get<{ data: Order[]; pagination: { total: number } }>("/orders"),
+    queryFn: () => authGet<{ data: Order[]; pagination: { total: number } }>("/orders"),
   });
 
   const orders = ordersData?.data?.data || [];

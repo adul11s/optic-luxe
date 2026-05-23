@@ -7,9 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────
-// USER & AUTH
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER & AUTHENTICATION
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model User {
   id             String    @id @default(cuid())
@@ -26,32 +26,40 @@ model User {
   deletedAt      DateTime?
   deletedBy      String?
 
-  staff          Staff?
-  addresses      Address[]
-  orders         Order[]
-  reviews        Review[]
-  wishlistItems  WishlistItem[]
-  cart           Cart?
-  auditLogs      AuditLog[]
+  staff           Staff?
+  addresses       Address[]
+  orders          Order[]
+  reviews         Review[]
+  wishlistItems   WishlistItem[]
+  cart            Cart?
+  auditLogs       AuditLog[]
+  offlineSales    OfflineSale[]  @relation("CashierSales")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive, isDeleted])
 }
 
 model Staff {
   id         String   @id @default(cuid())
   userId     String   @unique
-  position   String   // WAREHOUSE | CASHIER | SUPERVISOR
+  position   String   // WAREHOUSE | CASHIER | SUPERVISOR | DELIVERY
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   isDeleted  Boolean  @default(false)
   deletedAt  DateTime?
   deletedBy  String?
 
-  user       User          @relation(fields: [userId], references: [id])
-  shipments  Shipment[]
+  user         User          @relation(fields: [userId], references: [id])
+  shipments    Shipment[]
+  offlineSales OfflineSale[]
+
+  @@index([userId])
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // PRODUCT & CATALOG
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Category {
   id          String    @id @default(cuid())
@@ -67,7 +75,14 @@ model Category {
   deletedAt   DateTime?
   deletedBy   String?
 
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
   products    Product[]
+
+  @@index([slug])
+  @@index([isActive, isDeleted])
+  @@index([parentId])
 }
 
 model Product {
@@ -97,15 +112,20 @@ model Product {
   deletedAt       DateTime?
   deletedBy       String?
 
-  category        Category         @relation(fields: [categoryId], references: [id])
-  images          ProductImage[]
-  variants        ProductVariant[]
-  reviews         Review[]
-  wishlistItems   WishlistItem[]
-  orderItems      OrderItem[]
-  cartItems       CartItem[]
+  category         Category          @relation(fields: [categoryId], references: [id])
+  images           ProductImage[]
+  variants         ProductVariant[]
+  reviews          Review[]
+  wishlistItems    WishlistItem[]
+  orderItems       OrderItem[]
+  cartItems        CartItem[]
   procurementItems ProcurementItem[]
   offlineSaleItems OfflineSaleItem[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive, isDeleted])
+  @@index([isFeatured, isBestSeller, isNewArrival])
 }
 
 model ProductImage {
@@ -119,7 +139,9 @@ model ProductImage {
   updatedAt  DateTime @updatedAt
   isDeleted  Boolean  @default(false)
 
-  product    Product  @relation(fields: [productId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
 
 model ProductVariant {
@@ -130,197 +152,356 @@ model ProductVariant {
   colorHex    String?
   sizeLabel   String?  // e.g. "Small", "Medium", "Large", "52-18-140"
   stockQty    Int      @default(0)
+  reservedQty Int      @default(0)  // Stock reserved for pending paid orders (prevents overselling)
   minStockQty Int      @default(5)
+  priceOffset Float    @default(0) // variant-specific price adjustment (can be positive or negative)
   isActive    Boolean  @default(true)
+  version     Int      @default(0) // Optimistic locking: incremented on every stock change
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   isDeleted   Boolean  @default(false)
 
-product     Product            @relation(fields: [productId], references: [id])
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  inventoryMovements InventoryMovement[]
+  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images             ProductVariantImage[]
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
+  inventoryMovements  InventoryMovement[]
   procurementItems   ProcurementItem[]
   offlineSaleItems   OfflineSaleItem[]
+
+  @@index([productId])
+  @@index([sku])
+  @@index([isActive, isDeleted])
+  @@index([stockQty, reservedQty]) // For low-stock queries
 }
 
-// ─────────────────────────────────────
-// SHOPPING CART
-// ─────────────────────────────────────
-
-model Cart {
+// Variant-specific images (different from product-level images)
+model ProductVariantImage {
   id         String   @id @default(cuid())
-  userId     String   @unique
+  variantId  String
+  url        String
+  alt        String?
+  sortOrder  Int      @default(0)
+  isPrimary  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false)
+
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHOPPING CART
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Cart {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  expiresAt  DateTime? // cart expires for abandoned cart cleanup
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   user       User      @relation(fields: [userId], references: [id])
   items      CartItem[]
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model CartItem {
-  id         String   @id @default(cuid())
-  cartId     String
-  productId  String
-  variantId  String?
-  quantity   Int      @default(1)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(cuid())
+  cartId         String
+  productId      String
+  variantId      String?
+  quantity       Int      @default(1)
+  savedForLater  Boolean  @default(false) // "Save for later" feature
+  unitPrice      Float    // snapshot of price at time of adding (protects against price changes)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  cart       Cart             @relation(fields: [cartId], references: [id])
-  product    Product          @relation(fields: [productId], references: [id])
-  variant    ProductVariant?  @relation(fields: [variantId], references: [id])
+  cart           Cart             @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id])
+  variant        ProductVariant?  @relation(fields: [variantId], references: [id])
+
+  @@index([cartId])
+  @@index([savedForLater])
 }
 
-// ─────────────────────────────────────
-// ORDERS
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// ORDERS - Pure relational, no embedded arrays/objects
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Order {
-  id                String    @id @default(cuid())
-  orderNumber       String    @unique
-  userId            String
-  addressId         String?
-  status            String    @default("PENDING") // PENDING | CONFIRMED | PROCESSING | PACKED | SHIPPED | COMPLETED | CANCELLED
-  saleChannel       String    @default("ONLINE")  // ONLINE | OFFLINE
-  subtotal          Float     @default(0)
-  shippingCost      Float     @default(0)
-  discountAmount    Float     @default(0)
-  totalAmount       Float     @default(0)
-  shippingName      String?
-  shippingPhone     String?
-  shippingAddress   String?
-  shippingCity      String?
-  shippingProvince  String?
-  shippingPostal    String?
-  shippingMethod    String?   // STANDARD | EXPRESS
-  notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  isDeleted         Boolean   @default(false)
-  deletedAt         DateTime?
-  deletedBy         String?
+  id                   String    @id @default(cuid())
+  orderNumber          String    @unique
+  userId               String
+  addressId            String?   // references Address table
+  status               String    @default("PENDING")
+                       // PENDING → PAID → PROCESSING → SHIPPED → COMPLETED
+                       // CANCELLED (user/admin) | REFUNDED
+  saleChannel          String    @default("ONLINE") // ONLINE | OFFLINE
+  subtotal             Float     @default(0)
+  shippingCost         Float     @default(0)
+  discountAmount       Float     @default(0)
+  totalAmount          Float     @default(0)
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  isDeleted            Boolean   @default(false)
+  deletedAt            DateTime?
+  deletedBy            String?
 
-  user              User         @relation(fields: [userId], references: [id])
-  items             OrderItem[]
-  payment           Payment?
-  shipment          Shipment?
-  invoice           Invoice?
+  // Cancellation tracking
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  cancelledBy          String?
+
+  // Completion tracking
+  completedAt          DateTime?
+
+  // Shipping address via Address relation (not embedded)
+  address              Address?  @relation(fields: [addressId], references: [id])
+
+  // Relational links only
+  user                 User         @relation(fields: [userId], references: [id])
+  items                OrderItem[]
+  payment              Payment?
+  shipment             Shipment?
+  invoice              Invoice?
+
+  @@index([orderNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([saleChannel])
+  @@index([createdAt])
+  @@index([isDeleted, status])
 }
 
 model OrderItem {
-  id         String   @id @default(cuid())
-  orderId    String
-  productId  String
-  variantId  String?
-  quantity   Int
-  unitPrice  Float
-  totalPrice Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  isDeleted  Boolean  @default(false)
+  id             String   @id @default(cuid())
+  orderId        String
+  productId      String
+  variantId      String?
+  quantity       Int
+  unitPrice      Float    // snapshot: price at order time (guarantees historical accuracy)
+  totalPrice     Float    // quantity × unitPrice
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  isDeleted      Boolean  @default(false)
 
-  order      Order            @relation(fields: [orderId], references: [id])
-  product    Product          @relation(fields: [productId], references: [id])
-  variant    ProductVariant?  @relation(fields: [variantId], references: [id])
+  order          Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id])
+  variant        ProductVariant?  @relation(fields: [variantId], references: [id])
+  refundItems    RefundItem[]
+
+  @@index([orderId])
+  @@index([productId])
 }
 
-// ─────────────────────────────────────
-// PAYMENTS
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAYMENTS - Production-ready with gateway support, expiry, webhook payload
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Payment {
-  id              String    @id @default(cuid())
-  orderId         String    @unique
-  paymentMethod   String    // BANK_TRANSFER | E_WALLET | CREDIT_CARD
-  paymentStatus   String    @default("PENDING") // PENDING | VERIFIED | FAILED | REFUNDED
-  amount          Float
-  transactionId   String?
-  paymentProof    String?
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  isDeleted       Boolean   @default(false)
+  id                   String    @id @default(cuid())
+  orderId              String    @unique
+  paymentMethod        String    // BANK_TRANSFER | E_WALLET | CREDIT_CARD | QRIS | GOPAY | OVO | DANA | SHOPEEPAY | MIDTRANS | XENDIT
+  paymentGateway       String?   // MIDTRANS | XENDIT | STRIPE | DUMMY
+  paymentStatus        String    @default("PENDING")
+                       // PENDING → PAID → VERIFIED | EXPIRED → FAILED → REFUNDED
+  amount               Float
+  currency             String    @default("IDR")
 
-  order           Order     @relation(fields: [orderId], references: [id])
+  // Payment expiry (critical for Midtrans/Xendit timeout handling)
+  expiredAt             DateTime?
+
+  // Differentiate: customer paid vs admin/system verified
+  paidAt               DateTime?  // When customer completed payment
+  verifiedAt           DateTime?  // When admin/system verified
+  verifiedBy           String?    // userId of verifier
+
+  // Gateway integration
+  gatewayTransactionId String?    // Vendor's transaction reference
+  gatewayResponse      Json?      // Raw gateway webhook payload for debugging/reconciliation/fraud
+
+  // Additional fields
+  paymentProof         String?    // Uploaded proof for manual verification
+  failureReason        String?
+  refundReason         String?    // Reason for refund
+  refundAmount         Float?
+  refundedAt           DateTime?
+  refundedBy           String?    // userId who processed refund
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  isDeleted            Boolean   @default(false)
+
+  order                Order     @relation(fields: [orderId], references: [id])
+  refundItems          RefundItem[]
+
+  @@index([orderId])
+  @@index([paymentStatus])
+  @@index([gatewayTransactionId])
+  @@index([expiredAt])
+  @@index([paidAt])
 }
 
-// ─────────────────────────────────────
-// SHIPMENTS
-// ─────────────────────────────────────
+// Refund items - tracks which order items were refunded (for partial refunds)
+model RefundItem {
+  id            String   @id @default(cuid())
+  paymentId     String
+  orderItemId  String
+  quantity     Int      // quantity refunded
+  unitPrice    Float    // price per unit at time of refund
+  totalRefund  Float    // quantity × unitPrice
+  createdAt    DateTime @default(now())
+
+  payment      Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  orderItem    OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@index([paymentId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHIPMENTS - Enhanced with history tracking
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Shipment {
+  id                   String    @id @default(cuid())
+  orderId              String    @unique
+  staffId              String?   // Staff handling the shipment
+  courier              String?   // JNE | J&T | SiCepat | AnterAja | POS | OTHER
+  trackingNumber       String?
+  estimatedDelivery    DateTime? // Customer-facing ETA
+  status               String    @default("PENDING")
+                       // PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | RETURNED | CANCELLED
+  shippedAt            DateTime?
+  deliveredAt         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  isDeleted            Boolean   @default(false)
+
+  order                Order     @relation(fields: [orderId], references: [id])
+  staff                Staff?    @relation(fields: [staffId], references: [id])
+  history              ShipmentHistory[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([trackingNumber])
+}
+
+// Shipment status history for operational tracking
+model ShipmentHistory {
+  id           String   @id @default(cuid())
+  shipmentId   String
+  status       String   // mirrors Shipment.status values
+  notes        String?  // e.g. "Package picked up by courier", "Out for delivery"
+  location     String?  // e.g. "Jakarta Hub", "Customer address"
+  createdAt    DateTime @default(now())
+  createdBy    String?  // userId
+
+  shipment     Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVOICES - Generated ONLY after payment confirmation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Invoice {
   id              String    @id @default(cuid())
   orderId         String    @unique
-  staffId         String?
-  courier         String?
-  trackingNumber  String?
-  status          String    @default("PENDING") // PENDING | PICKED_UP | IN_TRANSIT | DELIVERED | RETURNED
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
+  invoiceNumber   String    @unique
+  issuedAt        DateTime  @default(now())
+  dueDate         DateTime?
+  paidAt          DateTime?  // When payment was confirmed (triggers invoice generation)
+  totalAmount     Float
+
+  status          String    @default("ISSUED")
+                  // ISSUED (awaiting payment) → PAID → OVERDUE | VOID | REFUNDED
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   isDeleted       Boolean   @default(false)
 
   order           Order     @relation(fields: [orderId], references: [id])
-  staff           Staff?    @relation(fields: [staffId], references: [id])
+
+  @@index([orderId])
+  @@index([invoiceNumber])
+  @@index([status])
 }
 
-// ─────────────────────────────────────
-// INVOICES
-// ─────────────────────────────────────
-
-model Invoice {
-  id             String    @id @default(cuid())
-  orderId        String    @unique
-  invoiceNumber  String    @unique
-  issuedAt       DateTime  @default(now())
-  dueDate        DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  isDeleted      Boolean   @default(false)
-
-  order          Order     @relation(fields: [orderId], references: [id])
-}
-
-// ─────────────────────────────────────
-// REVIEWS
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// REVIEWS - With moderation and purchase verification
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Review {
-  id         String   @id @default(cuid())
-  userId     String
-  productId  String
-  rating     Int      // 1-5
-  comment    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  isDeleted  Boolean  @default(false)
+  id          String   @id @default(cuid())
+  userId      String
+  productId   String
+  orderId     String?  // Links review to verified purchase
+  rating      Int      // 1-5
+  title       String?
+  comment     String?
 
-  user       User     @relation(fields: [userId], references: [id])
-  product    Product  @relation(fields: [productId], references: [id])
+  // Moderation
+  isVerified  Boolean  @default(false)  // Verified purchase (via OrderItem)
+  isApproved  Boolean  @default(true)   // Admin approved before publication
+  approvedBy  String?
+  approvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isDeleted   Boolean  @default(false)
+
+  user        User      @relation(fields: [userId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+  images      ReviewImage[]
+
+  @@index([productId])
+  @@index([userId])
+  @@index([isApproved, isDeleted])
+  @@index([rating])
 }
 
-// ─────────────────────────────────────
+model ReviewImage {
+  id        String   @id @default(cuid())
+  reviewId  String
+  url       String
+  alt       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // WISHLIST
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model WishlistItem {
   id         String   @id @default(cuid())
   userId     String
   productId  String
-  createdAt  DateTime @default(now())
+  addedAt    DateTime @default(now())
 
   user       User     @relation(fields: [userId], references: [id])
   product    Product  @relation(fields: [productId], references: [id])
 
   @@unique([userId, productId])
+  @@index([userId])
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // CUSTOMER ADDRESSES
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Address {
   id         String   @id @default(cuid())
@@ -338,11 +519,15 @@ model Address {
   isDeleted  Boolean  @default(false)
 
   user       User     @relation(fields: [userId], references: [id])
+  orders     Order[]
+
+  @@index([userId])
+  @@index([isDefault])
 }
 
-// ─────────────────────────────────────
-// SITE CONFIG (Admin managed)
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// SITE CONFIG (Admin managed CMS/config)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model SiteConfig {
   id             String   @id @default(cuid())
@@ -360,100 +545,132 @@ model SiteConfig {
   updatedAt      DateTime @updatedAt
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // AUDIT LOG
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model AuditLog {
   id         String   @id @default(cuid())
   userId     String
-  action     String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT
+  action     String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT | VERIFY | APPROVE
   entityType String
   entityId   String?
-  oldData    String?
-  newData    String?
+  oldData    Json?    // Store structured data instead of string
+  newData    Json?
   ipAddress  String?
   userAgent  String?
   createdAt  DateTime @default(now())
 
   user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
 }
 
-// ─────────────────────────────────────
-// INVENTORY MOVEMENT
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVENTORY MOVEMENT - Stock audit trail
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model InventoryMovement {
-  id          String   @id @default(cuid())
-  variantId   String
-  type        String   // ADD | REDUCE | SOLD_ONLINE | SOLD_OFFLINE | ADJUSTMENT | PROCUREMENT | RETURN
-  quantity    Int      // positive = added, negative = removed
-  balanceAfter Int
-  reference   String?  // orderNumber, procurementId, or notes
-  performedBy String   // userId
-  notes       String?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  variantId     String
+  type          String   // ADD | REDUCE | SOLD_ONLINE | SOLD_OFFLINE | ADJUSTMENT | PROCUREMENT | RETURN | TRANSFER_IN | TRANSFER_OUT
+  quantity      Int      // positive = added, negative = removed
+  balanceBefore Int?     // stock before this movement
+  balanceAfter  Int      // stock after this movement
+  reference     String?  // orderNumber, procurement PO number, or manual note
+  referenceId   String?  // orderId, procurementId for direct linking
+  performedBy   String   // userId
+  notes         String?
+  createdAt     DateTime @default(now())
 
-  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([variantId])
+  @@index([type])
+  @@index([referenceId])
+  @@index([createdAt])
 }
 
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 // PROCUREMENT (Supplier Purchase Orders)
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model Procurement {
   id            String   @id @default(cuid())
   poNumber      String   @unique
   supplier      String
-  status        String   @default("DRAFT") // DRAFT | ORDERED | RECEIVED | CANCELLED
+  status        String   @default("DRAFT") // DRAFT | ORDERED | PARTIAL | RECEIVED | CANCELLED
   totalAmount   Float    @default(0)
   notes         String?
   orderedAt     DateTime?
   receivedAt    DateTime?
   createdBy     String   // userId
+  receivedBy    String?  // userId - may differ from creator
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   isDeleted     Boolean  @default(false)
 
   items         ProcurementItem[]
+
+  @@index([poNumber])
+  @@index([status])
+  @@index([createdBy])
 }
 
 model ProcurementItem {
-  id            String   @id @default(cuid())
-  procurementId String
-  productId     String
-  variantId     String?
-  quantity      Int
-  unitPrice     Float
-  totalPrice    Float
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  procurementId   String
+  productId       String
+  variantId       String?
+  quantity        Int      // ordered quantity
+  receivedQty     Int      @default(0) // actually received (supports partial deliveries)
+  unitPrice       Float
+  totalPrice      Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  procurement   Procurement        @relation(fields: [procurementId], references: [id])
-  product       Product            @relation(fields: [productId], references: [id])
-  variant       ProductVariant?    @relation(fields: [variantId], references: [id])
+  procurement     Procurement     @relation(fields: [procurementId], references: [id], onDelete: Cascade)
+  product         Product         @relation(fields: [productId], references: [id])
+  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([procurementId])
+  @@index([receivedQty])
 }
 
-// ─────────────────────────────────────
-// OFFLINE SALE (POS Walk-in)
-// ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// OFFLINE SALE (POS / Walk-in)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 model OfflineSale {
-  id            String   @id @default(cuid())
-  saleNumber    String   @unique
-  cashierId     String   // userId of cashier
-  customerName  String?  // null = guest
-  customerPhone String?
-  subtotal      Float    @default(0)
-  discountAmount Float   @default(0)
-  totalAmount   Float    @default(0)
-  paymentMethod String   // CASH | BANK_TRANSFER | E_WALLET
-  paymentStatus String   @default("PAID") // PAID | REFUNDED
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  isDeleted     Boolean  @default(false)
+  id              String   @id @default(cuid())
+  saleNumber      String   @unique
+  cashierId       String   // userId of cashier (references Staff via User)
+  staffId         String?  // explicit Staff reference
+  saleChannel     String   @default("WALK_IN")
+                  // WALK_IN | PHONE_ORDER | WHATSAPP | INSTAGRAM | MARKETPLACE
+  customerName    String?
+  customerPhone   String?
+  subtotal        Float    @default(0)
+  discountAmount  Float    @default(0)
+  totalAmount     Float    @default(0)
+  paymentMethod   String   // CASH | BANK_TRANSFER | E_WALLET | QRIS
+  paymentStatus   String   @default("PAID") // PAID | REFUNDED
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isDeleted       Boolean  @default(false)
 
-  items         OfflineSaleItem[]
+  items           OfflineSaleItem[]
+  cashier         User     @relation("CashierSales", fields: [cashierId], references: [id])
+  staff           Staff?   @relation(fields: [staffId], references: [id])
+
+  @@index([saleNumber])
+  @@index([cashierId])
+  @@index([saleChannel])
+  @@index([createdAt])
 }
 
 model OfflineSaleItem {
@@ -462,11 +679,14 @@ model OfflineSaleItem {
   productId     String
   variantId     String?
   quantity      Int
-  unitPrice     Float
+  unitPrice     Float   // snapshot at time of sale
   totalPrice    Float
+  refundQty     Int     @default(0)  // How many units were refunded (for partial refunds)
   createdAt     DateTime @default(now())
 
-  sale          OfflineSale        @relation(fields: [saleId], references: [id])
-  product       Product            @relation(fields: [productId], references: [id])
-  variant       ProductVariant?    @relation(fields: [variantId], references: [id])
+  sale          OfflineSale       @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product       Product           @relation(fields: [productId], references: [id])
+  variant       ProductVariant?   @relation(fields: [variantId], references: [id])
+
+  @@index([saleId])
 }

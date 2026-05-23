@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../core/database/prisma.js';
+import { prisma } from '../core/database/prisma.js';
 import type { AuthenticatedRequest } from '../core/types/index.js';
 
 export function auditLog(
@@ -12,9 +12,15 @@ export function auditLog(
     _res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const originalJson = (req as any).res?.json;
+    const res = (req as any).res;
+    if (!res) {
+      next();
+      return;
+    }
 
-    (req as any).res?.json && ((req as any).res).json = function(data: unknown) {
+    const originalJson = res.json.bind(res);
+
+    res.json = function(data: unknown) {
       setImmediate(async () => {
         try {
           const userId = req.user?.userId;
@@ -38,7 +44,7 @@ export function auditLog(
         }
       });
 
-      return originalJson.call(this, data);
+      return originalJson(data);
     };
 
     next();

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, AlertTriangle, Package, Check, Edit2 } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Table, TableColumn } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPut } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product, ProductVariant } from "@/types";
 
@@ -29,12 +29,12 @@ export default function InventoryPage() {
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ["products", "inventory"],
-    queryFn: () => api.get<{ data: Product[] }>("/products", { params: { limit: 100 } }),
+    queryFn: () => authGet<{ data: Product[] }>("/products", { params: { limit: 100 } }),
   });
 
   const updateStock = useMutation({
     mutationFn: ({ variantId, stockQty }: { variantId: string; stockQty: number }) =>
-      api.put(`/products/variants/${variantId}`, { stockQty }),
+      authPut(`/products/variants/${variantId}`, { stockQty }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setEditingVariant(null);

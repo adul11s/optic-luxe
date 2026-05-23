@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authDelete } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/types";
 import Link from "next/link";
@@ -29,18 +29,18 @@ export default function ProductsPage() {
   const { data: productsData, isLoading } = useQuery({
     queryKey: ["products", page, categoryFilter, search],
     queryFn: () =>
-      api.get<{ data: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/products", {
+      authGet<{ data: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/products", {
         params: { page, limit, search: search || undefined, categoryId: categoryFilter || undefined },
       }),
   });
 
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
-    queryFn: () => api.get<{ data: Category[] }>("/categories"),
+    queryFn: () => authGet<{ data: Category[] }>("/categories"),
   });
 
   const deleteProduct = useMutation({
-    mutationFn: (productId: string) => api.delete(`/products/${productId}`),
+    mutationFn: (productId: string) => authDelete(`/products/${productId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
   });
 
