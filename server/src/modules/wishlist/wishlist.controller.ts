@@ -7,7 +7,7 @@ export async function getWishlist(req: Request, res: Response) {
     const items = await prisma.wishlistItem.findMany({
       where: { userId: req.user!.userId },
       include: { product: { include: { images: { where: { isPrimary: true }, take: 1 } } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { addedAt: 'desc' },
     });
     return sendSuccess(res, items);
   } catch (error: any) {

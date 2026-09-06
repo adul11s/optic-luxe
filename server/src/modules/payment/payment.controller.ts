@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
-import { sendSuccess, sendError } from '../../core/utils/response.js';
-import { confirmReservation, releaseReservation, deductStock } from '../../core/services/inventory.service.js';
+import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
+import { confirmReservation, releaseReservation } from '../../core/services/inventory.service.js';
 import { invalidateInventoryCache } from '../../core/services/cache.service.js';
-import { generateSlug } from '../../core/utils/slug.js';
 
 export async function createPayment(req: Request, res: Response) {
   try {
@@ -32,7 +31,7 @@ export async function createPayment(req: Request, res: Response) {
         paymentGateway: paymentGateway || 'DUMMY',
         amount: order.totalAmount,
         expiredAt,
-        transactionId,
+        gatewayTransactionId: transactionId,
         paymentProof,
         paymentStatus: 'PENDING',
       },
@@ -170,7 +169,7 @@ export async function getPayments(req: Request, res: Response) {
       }),
       prisma.payment.count({ where }),
     ]);
-    return sendSuccess(res, { data: payments, total, page, limit, totalPages: Math.ceil(total / limit) });
+    return sendPaginated(res, payments, total, page, limit);
   } catch (error: any) {
     return sendError(res, error.message, 500);
   }
@@ -299,9 +298,7 @@ export async function createPosSale(req: Request, res: Response) {
         }
         price += variant.priceOffset;
       } else {
-        if (product.stockQty < item.quantity) {
-          return sendError(res, `Insufficient stock for ${product.name}. Available: ${product.stockQty}`, 400);
-        }
+        return sendError(res, `Variant is required for ${product.name}`, 400);
       }
 
       const totalPrice = price * item.quantity;

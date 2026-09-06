@@ -14,21 +14,22 @@ async function getRedisClient(): Promise<RedisClientType> {
   return redis;
 }
 
-export type CacheTag = 'products' | 'categories' | 'users' | 'orders' | 'dashboard' | 'inventory';
+export type CacheTag = 'products' | 'categories' | 'users' | 'orders' | 'dashboard' | 'inventory' | 'analytics';
 
 interface CacheOptions {
   tags?: CacheTag[];
   ttlSeconds?: number;
 }
 
-const DEFAULT_TTL = {
+const DEFAULT_TTL: Record<CacheTag, number> = {
   products: 300,    // 5 min — product data changes occasionally
   categories: 3600, // 1 hr — category structure rarely changes
   users: 60,       // 1 min — user data changes frequently
   orders: 30,       // 30 sec — order status needs freshness
   dashboard: 60,   // 1 min — stats refresh frequently
   inventory: 15,    // 15 sec — stock levels need near real-time
-} satisfies Record<CacheTag, number>;
+  analytics: 60,   // 1 min — analytics refresh frequently
+};
 
 /**
  * Get a value from cache.
@@ -210,7 +211,7 @@ export async function getCachedProductDetail(slug: string) {
   );
 }
 
-export async function invalidateProductCache(slug?: string, categoryId?: string): Promise<void> {
+export async function invalidateProductCache(slug?: string, _categoryId?: string): Promise<void> {
   await cacheInvalidateTag('products');
   await cacheInvalidateTag('categories');
   if (slug) await cacheDel(PRODUCT_DETAIL_KEY(slug));

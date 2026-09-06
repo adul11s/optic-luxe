@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
-import { sendSuccess, sendError } from '../../core/utils/response.js';
+import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 
 // ── Inventory Overview ──
 
-export async function getInventoryOverview(req: Request, res: Response) {
+export async function getInventoryOverview(_req: Request, res: Response) {
   try {
     const variants = await prisma.productVariant.findMany({
       where: { isDeleted: false },
@@ -35,7 +35,7 @@ export async function getInventoryOverview(req: Request, res: Response) {
 
 // ── Low Stock Alerts ──
 
-export async function getLowStockAlerts(req: Request, res: Response) {
+export async function getLowStockAlerts(_req: Request, res: Response) {
   try {
     const alerts = await prisma.productVariant.findMany({
       where: { isDeleted: false, stockQty: { lte: prisma.productVariant.fields.minStockQty } },
@@ -61,11 +61,15 @@ export async function adjustStock(req: Request, res: Response) {
     const userId = req.user?.userId;
 
     if (!variantId || typeof quantity !== 'number' || quantity === 0) {
-      return sendError(res, 'variantId and non-zero quantity are required', 400);
+      sendError(res, 'variantId and non-zero quantity are required', 400);
+      return;
     }
 
     const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-    if (!variant) return sendError(res, 'Variant not found', 404);
+    if (!variant) {
+      sendError(res, 'Variant not found', 404);
+      return;
+    }
 
     const newQty = Math.max(0, variant.stockQty + quantity);
     const movementType = type || (quantity > 0 ? 'ADD' : 'REDUCE');
@@ -106,10 +110,7 @@ export async function getMovementHistory(req: Request, res: Response) {
       prisma.inventoryMovement.count({ where }),
     ]);
 
-    sendSuccess(res, {
-      data: movements,
-      pagination: { page: +page, limit: +limit, total, totalPages: Math.ceil(total / +limit) },
-    });
+    sendPaginated(res, movements, total, +page, +limit);
   } catch (error) {
     sendError(res, 'Failed to fetch movement history', 500);
   }
@@ -117,7 +118,7 @@ export async function getMovementHistory(req: Request, res: Response) {
 
 // ── Warehouse Dashboard ──
 
-export async function getWarehouseDashboard(req: Request, res: Response) {
+export async function getWarehouseDashboard(_req: Request, res: Response) {
   try {
     const [lowStockCount, recentMovements, pendingProcurements] = await Promise.all([
       prisma.productVariant.count({ where: { isDeleted: false, stockQty: { lte: prisma.productVariant.fields.minStockQty } } }),

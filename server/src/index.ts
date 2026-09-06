@@ -16,11 +16,12 @@ import addressRouter from './modules/address/address.routes.js';
 import warehouseRouter from './modules/warehouse/warehouse.routes.js';
 import posRouter from './modules/pos/pos.routes.js';
 import refundRouter from './modules/refund/refund.routes.js';
+import siteConfigRouter from './modules/site-config/site-config.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const CLIENT_URLS = (process.env.CLIENT_URL || 'http://localhost:3001,http://localhost:5173').split(',');
+const PORT = process.env.PORT || 3001;
+const CLIENT_URLS = (process.env.CLIENT_URL || 'http://localhost:3000,http://localhost:3001,http://localhost:5173').split(',');
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -59,6 +60,7 @@ app.use('/api/addresses', addressRouter);
 app.use('/api/warehouse', warehouseRouter);
 app.use('/api/pos', posRouter);
 app.use('/api/refunds', refundRouter);
+app.use('/api/site-config', siteConfigRouter);
 
 app.use(errorHandler);
 

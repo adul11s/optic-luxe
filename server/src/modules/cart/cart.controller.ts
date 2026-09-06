@@ -35,7 +35,9 @@ export async function addToCart(req: Request, res: Response) {
     if (existing) {
       await prisma.cartItem.update({ where: { id: existing.id }, data: { quantity: existing.quantity + quantity } });
     } else {
-      await prisma.cartItem.create({ data: { cartId: cart.id, productId, variantId, quantity } });
+      const productData = await prisma.product.findUnique({ where: { id: productId } });
+      const unitPrice = productData?.discountPrice || productData?.basePrice || 0;
+      await prisma.cartItem.create({ data: { cartId: cart.id, productId, variantId, quantity, unitPrice } });
     }
 
     const updated = await getOrCreateCart(req.user!.userId);

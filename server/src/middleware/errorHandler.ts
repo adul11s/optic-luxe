@@ -7,7 +7,7 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
   if (process.env.NODE_ENV === 'development') {
     console.error(err.stack);
   }
-  return sendError(res, err.message || 'Internal server error', 500);
+  sendError(res, err.message || 'Internal server error', 500);
 }
 
 export async function auditLog(
@@ -27,8 +27,8 @@ export async function auditLog(
         action,
         entityType,
         entityId,
-        oldData: oldData ? JSON.stringify(oldData) : null,
-        newData: newData ? JSON.stringify(newData) : null,
+        oldData: oldData ? JSON.stringify(oldData) : undefined,
+        newData: newData ? JSON.stringify(newData) : undefined,
         ipAddress,
         userAgent,
       },
@@ -40,10 +40,10 @@ export async function auditLog(
 
 export function auditMiddleware(entityType: string) {
   return async (req: Request, _res: Response, next: NextFunction) => {
-    const originalJson = res.json.bind(res);
+    const originalJson = _res.json.bind(_res);
     _res.json = function (body: unknown) {
       if (req.user && req.method !== 'GET') {
-        const entityId = req.params.id;
+        const entityId = (req.params as any).id;
         auditLog(
           req.user.userId,
           req.method === 'POST' ? 'CREATE' : req.method === 'PUT' || req.method === 'PATCH' ? 'UPDATE' : 'DELETE',

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
 import { sendSuccess, sendError } from '../../core/utils/response.js';
 import { processRefund, getRefundSummary, isRefundable, processPosRefund } from '../../core/services/refund.service.js';
-import { roleMiddleware } from '../../middleware/role.js';
 
 export async function createRefund(req: Request, res: Response) {
   try {

@@ -10,10 +10,11 @@ declare global {
   }
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return sendError(res, 'Authentication required', 401);
+    sendError(res, 'Authentication required', 401);
+    return;
   }
 
   const token = authHeader.split(' ')[1];
@@ -22,7 +23,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     req.user = decoded;
     next();
   } catch {
-    return sendError(res, 'Invalid or expired token', 401);
+    sendError(res, 'Invalid or expired token', 401);
   }
 }
 

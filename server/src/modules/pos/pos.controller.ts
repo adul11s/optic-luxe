@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
-import { sendSuccess, sendError } from '../../core/utils/response.js';
+import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 import { generateOrderNumber, generateInvoiceNumber } from '../../core/utils/slug.js';
 
 // ── Create Offline Sale (POS) ──
@@ -11,7 +11,8 @@ export async function createOfflineSale(req: Request, res: Response) {
     const cashierId = req.user?.userId;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return sendError(res, 'At least one item is required', 400);
+      sendError(res, 'At least one item is required', 400);
+      return;
     }
 
     const saleNumber = await generateOrderNumber();
@@ -74,7 +75,7 @@ export async function getOfflineSales(req: Request, res: Response) {
       prisma.offlineSale.count({ where }),
     ]);
 
-    sendSuccess(res, { data: sales, pagination: { page: +page, limit: +limit, total, totalPages: Math.ceil(total / +limit) } });
+    sendPaginated(res, sales, total, +page, +limit);
   } catch (error) {
     sendError(res, 'Failed to fetch offline sales', 500);
   }
@@ -82,7 +83,7 @@ export async function getOfflineSales(req: Request, res: Response) {
 
 // ── Cashier Dashboard ──
 
-export async function getCashierDashboard(req: Request, res: Response) {
+export async function getCashierDashboard(_req: Request, res: Response) {
   try {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -109,20 +110,29 @@ export async function getCashierDashboard(req: Request, res: Response) {
 export async function generateInvoicePOS(req: Request, res: Response) {
   try {
     const { orderId } = req.body;
-    if (!orderId) return sendError(res, 'orderId is required', 400);
+    if (!orderId) {
+      sendError(res, 'orderId is required', 400);
+      return;
+    }
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { items: { include: { product: true, variant: true } }, user: true, payment: true },
     });
-    if (!order) return sendError(res, 'Order not found', 404);
+    if (!order) {
+      sendError(res, 'Order not found', 404);
+      return;
+    }
 
     let invoice = await prisma.invoice.findUnique({ where: { orderId } });
-    if (invoice) return sendSuccess(res, invoice, 'Invoice already exists');
+    if (invoice) {
+      sendSuccess(res, invoice, 'Invoice already exists');
+      return;
+    }
 
     const invoiceNumber = generateInvoiceNumber();
     invoice = await prisma.invoice.create({
-      data: { orderId, invoiceNumber, issuedAt: new Date(), dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+      data: { orderId, invoiceNumber, issuedAt: new Date(), dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), totalAmount: order.totalAmount },
       include: { order: { include: { items: { include: { product: true, variant: true } }, user: true, payment: true } } },
     });
 
@@ -137,7 +147,10 @@ export async function generateInvoicePOS(req: Request, res: Response) {
 export async function customerLookup(req: Request, res: Response) {
   try {
     const { search } = req.query;
-    if (!search) return sendError(res, 'Search query required', 400);
+    if (!search) {
+      sendError(res, 'Search query required', 400);
+      return;
+    }
 
     const users = await prisma.user.findMany({
       where: {

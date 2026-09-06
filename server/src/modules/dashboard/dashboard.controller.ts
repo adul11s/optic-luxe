@@ -2,6 +2,44 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
 import { sendSuccess, sendError } from '../../core/utils/response.js';
 
+export async function getSidebarStats(req: Request, res: Response) {
+  try {
+    const role = req.user!.role;
+    const stats: Record<string, number> = {};
+
+    if (role === 'ADMIN' || role === 'STAFF') {
+      const [pendingOrders, pendingPayments, lowStockAlerts, totalUsers] = await Promise.all([
+        prisma.order.count({ where: { isDeleted: false, status: 'PENDING' } }),
+        prisma.payment.count({ where: { paymentStatus: 'PENDING' } }),
+        prisma.productVariant.count({
+          where: { isDeleted: false, stockQty: { lte: prisma.productVariant.fields.minStockQty } },
+        }),
+        role === 'ADMIN' ? prisma.user.count({ where: { isDeleted: false } }) : Promise.resolve(0),
+      ]);
+
+      stats.pendingOrders = pendingOrders;
+      stats.pendingPayments = pendingPayments;
+      stats.lowStockAlerts = lowStockAlerts;
+      stats.totalUsers = totalUsers;
+    }
+
+    if (role === 'CUSTOMER') {
+      const userId = req.user!.userId;
+      const [activeOrders, wishlistItems] = await Promise.all([
+        prisma.order.count({ where: { userId, isDeleted: false, status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
+        prisma.wishlistItem.count({ where: { userId } }),
+      ]);
+
+      stats.activeOrders = activeOrders;
+      stats.wishlistItems = wishlistItems;
+    }
+
+    return sendSuccess(res, stats);
+  } catch (error: any) {
+    return sendError(res, error.message, 500);
+  }
+}
+
 export async function getDashboard(req: Request, res: Response) {
   try {
     const role = req.user!.role;
@@ -64,7 +102,7 @@ export async function getDashboard(req: Request, res: Response) {
 
 // ── Enhanced Analytics: Online vs Offline ──
 
-export async function getSalesAnalytics(req: Request, res: Response) {
+export async function getSalesAnalytics(_req: Request, res: Response) {
   try {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
@@ -89,7 +127,7 @@ export async function getSalesAnalytics(req: Request, res: Response) {
 
     const lowStockItems = await prisma.productVariant.count({ where: { isDeleted: false, stockQty: { lte: prisma.productVariant.fields.minStockQty } } });
 
-    sendSuccess(res, {
+    return sendSuccess(res, {
       overview: {
         totalOnlineOrders: onlineOrders,
         totalOfflineOrders: offlineOrders,
@@ -111,7 +149,9 @@ export async function getSalesAnalytics(req: Request, res: Response) {
   } catch (error: any) {
     return sendError(res, error.message, 500);
   }
-}export async function getAnalytics(_req: Request, res: Response) {
+}
+
+export async function getAnalytics(_req: Request, res: Response) {
   try {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

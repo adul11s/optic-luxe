@@ -43,8 +43,6 @@ export async function processRefund({
   paymentId,
   reason,
   requestedBy,
-  ipAddress,
-  userAgent,
   items,
 }: RefundRequest): Promise<RefundResult> {
   const payment = await prisma.payment.findUnique({
@@ -72,7 +70,7 @@ export async function processRefund({
   await prisma.$transaction(async (tx) => {
     for (const orderItem of payment.order.items) {
       const refundQty = isPartial
-        ? (items.find((i) => i.orderItemId === orderItem.id)?.quantity ?? 0)
+        ? (items?.find((i) => i.orderItemId === orderItem.id)?.quantity ?? 0)
         : orderItem.quantity;
 
       if (refundQty <= 0) continue;
@@ -161,8 +159,6 @@ export async function processPosRefund(
   if (saleItem.refundQty + quantity > saleItem.quantity) {
     throw new Error(`Refund quantity exceeds sold quantity. Already refunded: ${saleItem.refundQty}`);
   }
-
-  const totalRefund = quantity * saleItem.unitPrice;
 
   await prisma.$transaction(async (tx) => {
     await tx.offlineSaleItem.update({
