@@ -2,12 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { sendError } from '../core/utils/response.js';
 
 export function roleMiddleware(...roles: string[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return sendError(res, 'Authentication required', 401);
+      sendError(res, 'Authentication required', 401);
+      return;
     }
     if (!roles.includes(req.user.role)) {
-      return sendError(res, 'Insufficient permissions', 403);
+      sendError(res, 'Insufficient permissions', 403);
+      return;
     }
     next();
   };

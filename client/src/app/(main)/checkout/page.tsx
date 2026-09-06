@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +10,8 @@ import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Cart, ShippingAddress } from "@/types";
 import { useAuth } from "@/lib/auth-provider";
+
+export const dynamic = "force-dynamic";
 
 const steps = [
   { id: "shipping", title: "Shipping", icon: Truck },

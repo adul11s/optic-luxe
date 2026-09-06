@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import prisma from '../core/database/prisma.js';
-import type { AuthenticatedRequest } from '../core/types/index.js';
+import { prisma } from '../core/database/prisma.js';
 
 export function auditLog(
   action: string,
@@ -8,29 +7,35 @@ export function auditLog(
   getEntityId?: (req: Request) => string
 ) {
   return async (
-    req: AuthenticatedRequest,
+    req: Request,
     _res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const originalJson = (req as any).res?.json;
+    const res = (req as any).res;
+    if (!res) {
+      next();
+      return;
+    }
 
-    (req as any).res?.json && ((req as any).res).json = function(data: unknown) {
+    const originalJson = res.json.bind(res);
+
+    res.json = function(data: unknown) {
       setImmediate(async () => {
         try {
           const userId = req.user?.userId;
-          const entityId = getEntityId ? getEntityId(req) : req.params.id;
-          const ipAddress = req.ip || req.connection.remoteAddress;
+          const entityId = getEntityId ? getEntityId(req) : (req.params as any).id;
+          const ipAddress = req.ip || (req as any).connection?.remoteAddress;
           const userAgent = req.headers['user-agent'];
 
           await prisma.auditLog.create({
             data: {
-              userId,
+              userId: userId || 'unknown',
               action,
               entityType,
               entityId: entityId || 'unknown',
-              newData: JSON.stringify(data),
-              ipAddress,
-              userAgent,
+              newData: data ? JSON.stringify(data) : undefined,
+              ipAddress: ipAddress || undefined,
+              userAgent: userAgent || undefined,
             },
           });
         } catch (error) {
@@ -38,7 +43,7 @@ export function auditLog(
         }
       });
 
-      return originalJson.call(this, data);
+      return originalJson(data);
     };
 
     next();
@@ -56,12 +61,12 @@ export async function logAudit(
   try {
     await prisma.auditLog.create({
       data: {
-        userId,
+        userId: userId || 'unknown',
         action,
         entityType,
         entityId,
-        oldData: oldData ? JSON.stringify(oldData) : null,
-        newData: newData ? JSON.stringify(newData) : null,
+        oldData: oldData ? JSON.stringify(oldData) : undefined,
+        newData: newData ? JSON.stringify(newData) : undefined,
       },
     });
   } catch (error) {

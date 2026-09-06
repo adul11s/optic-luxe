@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -9,6 +8,8 @@ import { Button, Card, Badge, ProductSkeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },

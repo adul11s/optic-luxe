@@ -1,14 +1,15 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, AlertTriangle, Package, Check, Edit2 } from "lucide-react";
-import { Button, Card, Badge, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Table, TableColumn } from "@/components/ui";
-import { api } from "@/lib/api";
+import { Button, Card, Badge, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Table, TableColumn, Pagination } from "@/components/ui";
+import { authGet, authPut } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product, ProductVariant } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -25,15 +26,17 @@ export default function InventoryPage() {
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
   const [editingVariant, setEditingVariant] = useState<VariantWithProduct | null>(null);
   const [newStock, setNewStock] = useState<number>(0);
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ["products", "inventory"],
-    queryFn: () => api.get<{ data: Product[] }>("/products", { params: { limit: 100 } }),
+    queryFn: () => authGet<{ data: Product[] }>("/products", { params: { limit: 100 } }),
   });
 
   const updateStock = useMutation({
     mutationFn: ({ variantId, stockQty }: { variantId: string; stockQty: number }) =>
-      api.put(`/products/variants/${variantId}`, { stockQty }),
+      authPut(`/products/variants/${variantId}`, { stockQty }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setEditingVariant(null);
@@ -59,6 +62,9 @@ export default function InventoryPage() {
 
   const lowStockCount = allVariants.filter((v) => v.stockQty > 0 && v.stockQty <= v.minStockQty).length;
   const outOfStockCount = allVariants.filter((v) => v.stockQty === 0).length;
+
+  const totalPages = Math.ceil(filteredVariants.length / limit);
+  const paginatedVariants = filteredVariants.slice((page - 1) * limit, page * limit);
 
   const columns: TableColumn<VariantWithProduct>[] = [
     {
@@ -181,29 +187,40 @@ export default function InventoryPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="w-full sm:w-2/3">
             <Input
               placeholder="Search by product name or SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
+              className="h-12 w-full"
             />
           </div>
-          <Select
-            options={[
-              { value: "all", label: "All Stock Status" },
-              { value: "low", label: "Low Stock" },
-              { value: "out", label: "Out of Stock" },
-            ]}
-            value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value as "all" | "low" | "out")}
-            className="w-full md:w-48"
-          />
+          <div className="w-full sm:w-1/3">
+            <Select
+              options={[
+                { value: "all", label: "All Stock Status" },
+                { value: "low", label: "Low Stock" },
+                { value: "out", label: "Out of Stock" },
+              ]}
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value as "all" | "low" | "out")}
+              className="w-full h-12"
+            />
+          </div>
         </div>
 
-        <Table columns={columns} data={filteredVariants} isLoading={isLoading} emptyMessage="No variants found" />
+        <Table columns={columns} data={paginatedVariants} isLoading={isLoading} emptyMessage="No variants found" />
       </Card>
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      )}
 
       <Modal isOpen={!!editingVariant} onClose={() => setEditingVariant(null)}>
         <ModalHeader>

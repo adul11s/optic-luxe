@@ -68,7 +68,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
             {isAuthenticated ? (
               <div className="hidden md:flex items-center gap-4">
-                <Link href="/account">
+                <Link href="/dashboard">
                   <Button variant="ghost" size="sm" leftIcon={<User className="w-4 h-4" />}>
                     {user?.name?.split(" ")[0]}
                   </Button>
@@ -115,7 +115,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               <div className="pt-4 border-t border-brand-100 space-y-2">
                 {isAuthenticated ? (
                   <>
-                    <Link href="/account" className="block px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 rounded-lg">
+                    <Link href="/dashboard" className="block px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 rounded-lg">
                       My Account
                     </Link>
                     <button

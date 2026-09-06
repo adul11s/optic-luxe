@@ -1,16 +1,19 @@
 "use client";
-export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authDelete } from "@/lib/api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import type { PaginatedResponse } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -24,28 +27,33 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const limit = 10;
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: productsData, isLoading } = useQuery({
-    queryKey: ["products", page, categoryFilter, search],
+    queryKey: ["products", page, categoryFilter, debouncedSearch],
     queryFn: () =>
-      api.get<{ data: Product[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/products", {
-        params: { page, limit, search: search || undefined, categoryId: categoryFilter || undefined },
+      authGet<PaginatedResponse<Product>>("/products", {
+        params: { page, limit, search: debouncedSearch || undefined, categoryId: categoryFilter || undefined },
       }),
   });
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
-    queryFn: () => api.get<{ data: Category[] }>("/categories"),
+    queryFn: () => authGet<{ data: Category[] }>("/categories"),
   });
 
   const deleteProduct = useMutation({
-    mutationFn: (productId: string) => api.delete(`/products/${productId}`),
+    mutationFn: (productId: string) => authDelete(`/products/${productId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
   });
 
-  const products = (productsData?.data?.data || []) as Product[];
-  const pagination = productsData?.data?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
-  const categories = (categoriesData?.data?.data || []) as Category[];
+  const products = (productsData?.data || []) as Product[];
+  const pagination = productsData?.meta || { page: 1, limit: 10, total: 0, totalPages: 0 };
+  const categories = (categoriesData?.data || []) as Category[];
 
   const columns: TableColumn<Product>[] = [
     {
@@ -157,24 +165,27 @@ export default function ProductsPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="w-full sm:w-2/3">
             <Input
               placeholder="Search products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
+              className="h-12 w-full"
             />
           </div>
-          <Select
-            options={[{ value: "", label: "All Categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full md:w-48"
-          />
+          <div className="w-full sm:w-1/3">
+            <Select
+              options={[{ value: "", label: "All Categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-12"
+            />
+          </div>
         </div>
 
         <Table columns={columns} data={products} isLoading={isLoading} emptyMessage="No products found" />

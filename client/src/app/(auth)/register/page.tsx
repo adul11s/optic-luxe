@@ -1,16 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui";
-import { useAuth } from "@/lib/auth-provider";
+import { api } from "@/lib/api";
+
+export const dynamic = "force-dynamic";
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -38,11 +37,17 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await register(formData.name, formData.email, formData.password);
-      router.push("/dashboard");
+      const response = await api.post("/auth/register", {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      const { user, token } = response.data.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      window.location.href = "/dashboard";
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Registration failed");
-    } finally {
       setIsLoading(false);
     }
   };

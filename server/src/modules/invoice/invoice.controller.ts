@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
-import { sendSuccess, sendError } from '../../core/utils/response.js';
+import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 import { generateInvoiceNumber } from '../../core/utils/slug.js';
 
 export async function generateInvoice(req: Request, res: Response) {
@@ -18,6 +18,7 @@ export async function generateInvoice(req: Request, res: Response) {
         orderId,
         invoiceNumber: generateInvoiceNumber(),
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        totalAmount: order.totalAmount,
       },
       include: { order: { include: { items: { include: { product: true } }, payment: true, user: { select: { name: true, email: true } } } } },
     });
@@ -42,7 +43,7 @@ export async function getInvoices(req: Request, res: Response) {
       prisma.invoice.findMany({ where, include: { order: { include: { items: { include: { product: true } }, payment: true, user: { select: { name: true, email: true } } } } }, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
       prisma.invoice.count({ where }),
     ]);
-    return sendSuccess(res, { data: invoices, total, page, limit });
+    return sendPaginated(res, invoices, total, page, limit);
   } catch (error: any) {
     return sendError(res, error.message, 500);
   }

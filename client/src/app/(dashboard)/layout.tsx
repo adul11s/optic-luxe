@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-provider";
+import { authGet } from "@/lib/api";
 import {
   LayoutDashboard,
   Package,
@@ -18,20 +20,26 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
+  Warehouse,
+  Store,
+  Search,
 } from "lucide-react";
-import { Button, Badge } from "@/components/ui";
+import { Button, Badge, Input } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
 
 interface NavItem {
   label: string;
   href: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }
 
 const staffNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
+  { label: "Warehouse", href: "/dashboard/warehouse", icon: Warehouse },
+  { label: "POS", href: "/dashboard/pos", icon: Store },
   { label: "Inventory", href: "/dashboard/inventory", icon: Package },
   { label: "Payments", href: "/dashboard/payments", icon: FileText },
   { label: "Shipments", href: "/dashboard/shipments", icon: Truck },
@@ -48,26 +56,88 @@ const adminNav: NavItem[] = [
 ];
 
 const customerNav: NavItem[] = [
-  { label: "My Orders", href: "/account/orders", icon: ShoppingBag },
-  { label: "Wishlist", href: "/account/wishlist", icon: Heart },
-  { label: "Addresses", href: "/account/addresses", icon: Package },
-  { label: "Account", href: "/account", icon: Users },
+  { label: "My Orders", href: "/dashboard/orders", icon: ShoppingBag },
+  { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
+  { label: "Addresses", href: "/dashboard/addresses", icon: Package },
+  { label: "Account", href: "/dashboard/account", icon: Users },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading, isHydrated } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isOrdersExpanded, setIsOrdersExpanded] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const { data: statsResponse } = useQuery({
+    queryKey: ["dashboard", "sidebar-stats"],
+    queryFn: () => authGet<{ data: Record<string, number> }>("/dashboard/sidebar-stats"),
+    enabled: !!user,
+  });
+
+  const stats = statsResponse?.data || {};
+
+  useEffect(() => {
+    if (isHydrated && !user) {
+      router.push("/login");
+    }
+  }, [isHydrated, user, router]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-brand-950 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   if (!user) {
-    router.push("/login");
-    return null;
+    return (
+      <div className="min-h-screen bg-brand-50 flex items-center justify-center">
+        <p className="text-brand-500">Redirecting to login...</p>
+      </div>
+    );
   }
 
   const role = user.role;
-  const navItems = role === "ADMIN" ? adminNav : role === "STAFF" ? staffNav : customerNav;
+
+  const getNavWithBadges = (items: NavItem[]): NavItem[] => {
+    return items.map((item) => {
+      let badge: string | undefined;
+      if (item.href === "/dashboard/orders" && role === "CUSTOMER" && stats.activeOrders > 0) {
+        badge = String(stats.activeOrders);
+      } else if (item.href === "/dashboard/orders" && stats.pendingOrders > 0) {
+        badge = String(stats.pendingOrders);
+      }
+      if (item.href === "/dashboard/payments" && stats.pendingPayments > 0) badge = String(stats.pendingPayments);
+      if (item.href === "/dashboard/warehouse" && stats.lowStockAlerts > 0) badge = String(stats.lowStockAlerts);
+      if (item.href === "/dashboard/users" && stats.totalUsers > 0) badge = String(stats.totalUsers);
+      if (item.href === "/dashboard/wishlist" && stats.wishlistItems > 0) badge = String(stats.wishlistItems);
+      return { ...item, badge };
+    });
+  };
+
+  const navItems = getNavWithBadges(
+    role === "ADMIN" ? adminNav : role === "STAFF" ? staffNav : customerNav
+  );
+
+  const filteredNavItems = searchTerm
+    ? navItems.filter((item) =>
+        item.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const handleLogout = () => {
     logout();
@@ -97,6 +167,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {role}
                 </Badge>
               </div>
+            </div>
+          </div>
+
+          <div className="px-4 pt-4 pb-2" ref={searchRef}>
+            <div className="relative min-w-0">
+              <Input
+                placeholder="Search menu..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onFocus={() => setIsSearchOpen(true)}
+                leftIcon={<Search className="w-4 h-4" />}
+                className="text-sm"
+              />
+              {isSearchOpen && searchTerm && filteredNavItems.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {filteredNavItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => {
+                          setIsSidebarOpen(false);
+                          setSearchTerm("");
+                          setIsSearchOpen(false);
+                        }}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-700 hover:bg-brand-50 transition-colors first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        <Icon className="w-4 h-4 text-brand-400" />
+                        {item.label}
+                        {item.badge && (
+                          <Badge variant="danger" size="sm" className="ml-auto">
+                            {item.badge}
+                          </Badge>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+              {isSearchOpen && searchTerm && filteredNavItems.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 px-4 py-3 text-sm text-brand-500">
+                  No results found
+                </div>
+              )}
             </div>
           </div>
 

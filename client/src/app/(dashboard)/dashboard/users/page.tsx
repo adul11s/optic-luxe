@@ -1,14 +1,17 @@
 "use client";
-export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, Plus, Edit2, Trash2, Shield, UserCheck, UserX } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
-import { api } from "@/lib/api";
+import { authGet, authPut, authDelete } from "@/lib/api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import type { PaginatedResponse } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { User, Role } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -22,28 +25,33 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const limit = 10;
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: usersData, isLoading } = useQuery({
-    queryKey: ["users", page, roleFilter, search],
+    queryKey: ["users", page, roleFilter, debouncedSearch],
     queryFn: () =>
-      api.get<{ data: User[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/users", {
-        params: { page, limit, role: roleFilter || undefined, search: search || undefined },
+      authGet<PaginatedResponse<User>>("/users", {
+        params: { page, limit, role: roleFilter || undefined, search: debouncedSearch || undefined },
       }),
   });
 
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
   const updateUser = useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) =>
-      api.put(`/users/${userId}`, data),
+      authPut(`/users/${userId}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
   const deleteUser = useMutation({
-    mutationFn: (userId: string) => api.delete(`/users/${userId}`),
+    mutationFn: (userId: string) => authDelete(`/users/${userId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
-  const users = (usersData?.data?.data || []) as User[];
-  const pagination = usersData?.data?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
+  const users = (usersData?.data || []) as User[];
+  const pagination = usersData?.meta || { page: 1, limit: 10, total: 0, totalPages: 0 };
 
   const columns: TableColumn<User>[] = [
     {
@@ -139,29 +147,32 @@ export default function UsersPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="w-full sm:w-2/3">
             <Input
               placeholder="Search by name or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
+              className="h-12 w-full"
             />
           </div>
-          <Select
-            options={[
-              { value: "", label: "All Roles" },
-              { value: "ADMIN", label: "Admin" },
-              { value: "STAFF", label: "Staff" },
-              { value: "CUSTOMER", label: "Customer" },
-            ]}
-            value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value as Role | "");
-              setPage(1);
-            }}
-            className="w-full md:w-48"
-          />
+          <div className="w-full sm:w-1/3">
+            <Select
+              options={[
+                { value: "", label: "All Roles" },
+                { value: "ADMIN", label: "Admin" },
+                { value: "STAFF", label: "Staff" },
+                { value: "CUSTOMER", label: "Customer" },
+              ]}
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value as Role | "");
+                setPage(1);
+              }}
+              className="w-full h-12"
+            />
+          </div>
         </div>
 
         <Table columns={columns} data={users} isLoading={isLoading} emptyMessage="No users found" />

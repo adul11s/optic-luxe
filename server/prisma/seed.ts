@@ -90,7 +90,6 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
   const rows: ProductSeed[] = [];
   const catMap: Record<string, string> = { MEN: menId, WOMEN: womenId, UNISEX: unisexId, KIDS: kidsId };
 
-  // ── MEN (15 products) ──
   const menProducts: Omit<ProductSeed, 'slug' | 'categoryIdPlaceholder'>[] = [
     { name: 'Modern Rectangle', frameShape: 'RECTANGLE', material: 'ACETATE', gender: 'MEN', style: 'MODERN', color: 'Black', basePrice: 380000, isNewArrival: true },
     { name: 'Square Bold', frameShape: 'SQUARE', material: 'TR90', gender: 'MEN', style: 'BOLD', color: 'Matte Black', basePrice: 350000 },
@@ -109,7 +108,6 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
     { name: 'Weekend Round', frameShape: 'ROUND', material: 'TR90', gender: 'MEN', style: 'MODERN', color: 'Olive', basePrice: 310000 },
   ];
 
-  // ── WOMEN (16 products) ──
   const womenProducts: Omit<ProductSeed, 'slug' | 'categoryIdPlaceholder'>[] = [
     { name: 'Cat Eye Elegance', frameShape: 'CAT_EYE', material: 'ACETATE', gender: 'WOMEN', style: 'MODERN', color: 'Tortoise', basePrice: 420000, discountPrice: 379000, isFeatured: true },
     { name: 'Oval Delicate', frameShape: 'OVAL', material: 'METAL', gender: 'WOMEN', style: 'MINIMAL', color: 'Rose Gold', basePrice: 390000, isNewArrival: true },
@@ -129,7 +127,6 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
     { name: 'Luna Aviator', frameShape: 'AVIATOR', material: 'METAL', gender: 'WOMEN', style: 'MODERN', color: 'Gold', basePrice: 380000, isNewArrival: true },
   ];
 
-  // ── UNISEX (12 products) ──
   const unisexProducts: Omit<ProductSeed, 'slug' | 'categoryIdPlaceholder'>[] = [
     { name: 'Classic Aviator', frameShape: 'AVIATOR', material: 'METAL', gender: 'UNISEX', style: 'CLASSIC', color: 'Gold', basePrice: 450000, discountPrice: 399000, isFeatured: true, isBestSeller: true },
     { name: 'Round Vintage', frameShape: 'ROUND', material: 'TITANIUM', gender: 'UNISEX', style: 'VINTAGE', color: 'Silver', basePrice: 520000, isFeatured: true, isNewArrival: true },
@@ -145,7 +142,6 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
     { name: 'Fusion Wayfarer', frameShape: 'WAYFARER', material: 'TR90', gender: 'UNISEX', style: 'MODERN', color: 'Teal', basePrice: 310000 },
   ];
 
-  // ── KIDS (8 products) ──
   const kidsProducts: Omit<ProductSeed, 'slug' | 'categoryIdPlaceholder'>[] = [
     { name: 'Kids Fun Round', frameShape: 'ROUND', material: 'TR90', gender: 'KIDS', style: 'MODERN', color: 'Blue', basePrice: 280000 },
     { name: 'Tiny Aviator', frameShape: 'AVIATOR', material: 'METAL', gender: 'KIDS', style: 'CLASSIC', color: 'Silver', basePrice: 260000 },
@@ -157,15 +153,12 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
     { name: 'Little Oval', frameShape: 'OVAL', material: 'METAL', gender: 'KIDS', style: 'MINIMAL', color: 'Rose Gold', basePrice: 300000, isNewArrival: true },
   ];
 
-  const all: Omit<ProductSeed, 'slug' | 'categoryIdPlaceholder'>[] = [
-    ...menProducts, ...womenProducts, ...unisexProducts, ...kidsProducts,
-  ];
+  const all = [...menProducts, ...womenProducts, ...unisexProducts, ...kidsProducts];
 
   for (const p of all) {
     rows.push({ ...p, slug: generateSlug(p.name), categoryIdPlaceholder: catMap[p.gender] });
   }
 
-  // Shuffle so products appear mixed across categories in catalog
   for (let i = rows.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [rows[i], rows[j]] = [rows[j], rows[i]];
@@ -175,20 +168,22 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
 }
 
 async function main() {
-  console.log('🌱 Seeding Optic Luxe database (50+ products)...');
+  console.log('Seeding Optic Luxe database...');
 
-  // Clean existing data
   await prisma.auditLog.deleteMany();
   await prisma.wishlistItem.deleteMany();
+  await prisma.reviewImage.deleteMany();
   await prisma.review.deleteMany();
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
-  await prisma.invoice.deleteMany();
+  await prisma.shipmentHistory.deleteMany();
   await prisma.shipment.deleteMany();
+  await prisma.invoice.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.address.deleteMany();
+  await prisma.productVariantImage.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
@@ -196,31 +191,37 @@ async function main() {
   await prisma.staff.deleteMany();
   await prisma.siteConfig.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.offlineSaleItem.deleteMany();
+  await prisma.offlineSale.deleteMany();
+  await prisma.procurementItem.deleteMany();
+  await prisma.procurement.deleteMany();
+  await prisma.inventoryMovement.deleteMany();
 
   const hashedPassword = await bcrypt.hash('password123', 12);
 
-  // ── Users ──
   const admin = await prisma.user.create({ data: { email: 'admin@opticluxe.com', password: hashedPassword, name: 'Admin Optic', role: 'ADMIN', phone: '081234567890' } });
   const staff1 = await prisma.user.create({ data: { email: 'staff@opticluxe.com', password: hashedPassword, name: 'Budi Staff', role: 'STAFF', phone: '081234567891' } });
-  await prisma.staff.create({ data: { userId: staff1.id, position: 'WAREHOUSE' } });
+  const staffRecord1 = await prisma.staff.create({ data: { userId: staff1.id, position: 'WAREHOUSE' } });
   const staff2 = await prisma.user.create({ data: { email: 'cashier@opticluxe.com', password: hashedPassword, name: 'Ani Cashier', role: 'STAFF', phone: '081234567893' } });
-  await prisma.staff.create({ data: { userId: staff2.id, position: 'CASHIER' } });
+  const staffRecord2 = await prisma.staff.create({ data: { userId: staff2.id, position: 'CASHIER' } });
   const staff3 = await prisma.user.create({ data: { email: 'supervisor@opticluxe.com', password: hashedPassword, name: 'Doni Supervisor', role: 'STAFF', phone: '081234567894' } });
   await prisma.staff.create({ data: { userId: staff3.id, position: 'SUPERVISOR' } });
   const customer = await prisma.user.create({ data: { email: 'customer@opticluxe.com', password: hashedPassword, name: 'Sarah Wijaya', role: 'CUSTOMER', phone: '081234567892' } });
   const customer2 = await prisma.user.create({ data: { email: 'alex@example.com', password: hashedPassword, name: 'Alex Pranata', role: 'CUSTOMER', phone: '081234567895' } });
 
-  // ── Addresses ──
-  await prisma.address.create({ data: { userId: customer.id, label: 'Home', name: 'Sarah', phone: '081234567892', address: 'Jl. Sudirman No. 123, Senayan', city: 'Jakarta Selatan', province: 'DKI Jakarta', postalCode: '12190', isDefault: true } });
+  const addrSarah = await prisma.address.create({ data: { userId: customer.id, label: 'Home', name: 'Sarah', phone: '081234567892', address: 'Jl. Sudirman No. 123, Senayan', city: 'Jakarta Selatan', province: 'DKI Jakarta', postalCode: '12190', isDefault: true } });
   await prisma.address.create({ data: { userId: customer.id, label: 'Office', name: 'Sarah Wijaya', phone: '081234567892', address: 'Jl. Thamrin No. 45, Menteng', city: 'Jakarta Pusat', province: 'DKI Jakarta', postalCode: '10340', isDefault: false } });
+  await prisma.address.create({ data: { userId: customer2.id, label: 'Home', name: 'Alex', phone: '081234567895', address: 'Jl. Gatot Subroto No. 88, Senayan', city: 'Jakarta Selatan', province: 'DKI Jakarta', postalCode: '12190', isDefault: true } });
 
-  // ── Categories ──
   const catMen = await prisma.category.create({ data: { name: 'Men', slug: 'men', description: 'Bold frames designed for the modern gentleman. From classic to contemporary.', sortOrder: 1, image: 'https://images.unsplash.com/photo-1473496169904-658ba7c44d82?w=400&auto=format&fit=crop' } });
   const catWomen = await prisma.category.create({ data: { name: 'Women', slug: 'women', description: 'Elegant and expressive eyewear that celebrates feminine style.', sortOrder: 2, image: 'https://images.unsplash.com/photo-1509696507120-5b9a8d69eb75?w=400&auto=format&fit=crop' } });
   const catUnisex = await prisma.category.create({ data: { name: 'Unisex', slug: 'unisex', description: 'Versatile designs that transcend gender. Style without boundaries.', sortOrder: 3, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&auto=format&fit=crop' } });
   const catKids = await prisma.category.create({ data: { name: 'Kids', slug: 'kids', description: 'Fun, durable eyewear designed for active young ones.', sortOrder: 4, image: 'https://images.unsplash.com/photo-1508522023215-7aff4e57cd4a?w=400&auto=format&fit=crop' } });
 
-  // ── Build 51 products ──
+  const catSunglasses = await prisma.category.create({ data: { name: 'Sunglasses', slug: 'sunglasses', description: 'Premium UV protection sunglasses.', sortOrder: 5, image: 'https://images.unsplash.com/photo-1577803645773-f96470509666?w=400&auto=format&fit=crop' } });
+  const catPolarized = await prisma.category.create({ data: { name: 'Polarized', slug: 'polarized', description: 'Polarized lenses for glare-free vision.', sortOrder: 6, parentId: catSunglasses.id, image: 'https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=400&auto=format&fit=crop' } });
+  const catSports = await prisma.category.create({ data: { name: 'Sports', slug: 'sports', description: 'Performance eyewear for active lifestyles.', sortOrder: 7, parentId: catSunglasses.id, image: 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=400&auto=format&fit=crop' } });
+
   const products = buildCatalog(catMen.id, catWomen.id, catUnisex.id, catKids.id);
 
   const colorSets: Record<string, string[]> = {
@@ -270,6 +271,8 @@ async function main() {
     'Amber': '#D97706',
   };
 
+  const createdProducts: Awaited<ReturnType<typeof prisma.product.create>>[] = [];
+
   for (const p of products) {
     const shapeLabel = shapeLabels[p.frameShape] || p.frameShape.toLowerCase();
     const materialLabel = materialLabels[p.material] || p.material.toLowerCase();
@@ -286,12 +289,13 @@ async function main() {
         isActive: true, createdBy: admin.id,
       },
     });
+    createdProducts.push(product);
 
-    // Variants
     const baseColor = p.color;
     const colors = colorSets[baseColor] || [baseColor];
     for (const c of colors) {
-      await prisma.productVariant.create({
+      const priceOffset = c !== baseColor && Math.random() > 0.7 ? (Math.random() * 30000 - 15000) : 0;
+      const variant = await prisma.productVariant.create({
         data: {
           productId: product.id,
           sku: `OPT-${p.slug.toUpperCase()}-${c.toUpperCase().replace(/ /g, '')}`,
@@ -299,83 +303,229 @@ async function main() {
           colorHex: colorHexes[c] || null,
           stockQty: Math.floor(Math.random() * 30) + 10,
           minStockQty: 5,
+          priceOffset,
+          isActive: true,
         },
       });
+
+      const img1 = unsplashEyewear[Math.floor(Math.random() * unsplashEyewear.length)];
+      const img2 = unsplashEyewear[Math.floor(Math.random() * unsplashEyewear.length)];
+      await prisma.productVariantImage.create({ data: { variantId: variant.id, url: img1, alt: `${p.name} - ${c}`, sortOrder: 0, isPrimary: true } });
+      await prisma.productVariantImage.create({ data: { variantId: variant.id, url: img2, alt: `${p.name} - ${c} Side`, sortOrder: 1 } });
     }
 
-    // Images — 2 per product from unsplash rotation
     const img1 = unsplashEyewear[Math.floor(Math.random() * unsplashEyewear.length)];
     const img2 = unsplashEyewear[Math.floor(Math.random() * unsplashEyewear.length)];
     await prisma.productImage.create({ data: { productId: product.id, url: img1, alt: p.name, sortOrder: 0, isPrimary: true } });
-    await prisma.productImage.create({ data: { productId: product.id, url: img2, alt: `${p.name} Angle`, sortOrder: 1 } });
+    await prisma.productImage.create({ data: { productId: product.id, url: img2, alt: `${p.name} Alternate`, sortOrder: 1 } });
   }
 
-  console.log(`   ✅ ${products.length} products created`);
+  console.log(`   ${products.length} products created`);
 
-  // ── Reviews (spread across products) ──
   for (const p of products) {
-    const product = await prisma.product.findUnique({ where: { slug: p.slug } });
+    const product = createdProducts.find(x => x.slug === p.slug);
     if (!product) continue;
-    await prisma.review.create({ data: { userId: customer.id, productId: product.id, rating: Math.floor(Math.random() * 2) + 4, comment: pickRandom(reviewComments) } });
+    await prisma.review.create({ data: { userId: customer.id, productId: product.id, rating: Math.floor(Math.random() * 2) + 4, comment: pickRandom(reviewComments), isVerified: false, isApproved: true, title: pickRandom(['Great!', 'Love it', 'Perfect fit', 'Excellent quality', 'Highly recommended']) } });
     if (Math.random() > 0.4) {
-      await prisma.review.create({ data: { userId: customer2.id, productId: product.id, rating: Math.floor(Math.random() * 2) + 3, comment: pickRandom(reviewComments) } });
+      await prisma.review.create({ data: { userId: customer2.id, productId: product.id, rating: Math.floor(Math.random() * 2) + 3, comment: pickRandom(reviewComments), isVerified: false, isApproved: true } });
     }
   }
 
-  // ── Cart for customer ──
-  const cart = await prisma.cart.create({ data: { userId: customer.id } });
+  const cart = await prisma.cart.create({ data: { userId: customer.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } });
   const prodCart1 = await prisma.product.findFirst({ where: { isBestSeller: true } });
   const prodCart2 = await prisma.product.findFirst({ where: { isNewArrival: true } });
   const varCart1 = prodCart1 ? await prisma.productVariant.findFirst({ where: { productId: prodCart1.id } }) : null;
   const varCart2 = prodCart2 ? await prisma.productVariant.findFirst({ where: { productId: prodCart2.id } }) : null;
-  if (prodCart1 && varCart1) await prisma.cartItem.create({ data: { cartId: cart.id, productId: prodCart1.id, variantId: varCart1.id, quantity: 1 } });
-  if (prodCart2 && varCart2) await prisma.cartItem.create({ data: { cartId: cart.id, productId: prodCart2.id, variantId: varCart2.id, quantity: 2 } });
-
-  // ── Sample Orders ──
-  const staff1Record = await prisma.staff.findUnique({ where: { userId: staff1.id } });
-  const staffId = staff1Record!.id;
-  const addr = await prisma.address.findFirst({ where: { userId: customer.id } });
+  if (prodCart1 && varCart1) {
+    const price1 = prodCart1.discountPrice || prodCart1.basePrice;
+    await prisma.cartItem.create({ data: { cartId: cart.id, productId: prodCart1.id, variantId: varCart1.id, quantity: 1, unitPrice: price1 } });
+  }
+  if (prodCart2 && varCart2) {
+    const price2 = prodCart2.discountPrice || prodCart2.basePrice;
+    await prisma.cartItem.create({ data: { cartId: cart.id, productId: prodCart2.id, variantId: varCart2.id, quantity: 2, unitPrice: price2 } });
+  }
 
   const firstProd = await prisma.product.findFirst({ orderBy: { createdAt: 'asc' } });
-  const secondProd = await prisma.product.findFirst({ orderBy: { createdAt: 'asc' }, skip: 0 });
   const thirdProd = (await prisma.product.findMany({ take: 5 }))[4];
+  const fifthProd = (await prisma.product.findMany({ take: 10 }))[8];
 
-  if (firstProd && addr) {
+  if (firstProd && addrSarah) {
     const v1 = await prisma.productVariant.findFirst({ where: { productId: firstProd.id } });
     if (v1) {
       const price1 = firstProd.discountPrice || firstProd.basePrice;
-      const order1 = await prisma.order.create({ data: { orderNumber: 'ORD-20260501-0001', userId: customer.id, addressId: addr.id, status: 'COMPLETED', subtotal: price1, shippingCost: 0, discountAmount: 0, totalAmount: price1, shippingMethod: 'STANDARD', shippingName: 'Sarah', shippingPhone: '081234567892', shippingAddress: addr.address, shippingCity: addr.city, shippingProvince: addr.province, shippingPostal: addr.postalCode, createdAt: new Date('2026-05-01') } });
+      const order1 = await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-20260501-0001',
+          userId: customer.id,
+          addressId: addrSarah.id,
+          status: 'COMPLETED',
+          saleChannel: 'ONLINE',
+          subtotal: price1,
+          shippingCost: 0,
+          discountAmount: 0,
+          totalAmount: price1,
+          completedAt: new Date('2026-05-05'),
+        },
+      });
       await prisma.orderItem.create({ data: { orderId: order1.id, productId: firstProd.id, variantId: v1.id, quantity: 1, unitPrice: price1, totalPrice: price1 } });
-      await prisma.payment.create({ data: { orderId: order1.id, paymentMethod: 'BANK_TRANSFER', paymentStatus: 'VERIFIED', amount: order1.totalAmount, verifiedAt: new Date('2026-05-02'), verifiedBy: staffId } });
-      await prisma.shipment.create({ data: { orderId: order1.id, staffId: staffId, courier: 'JNE', trackingNumber: 'JNE1234567890', status: 'DELIVERED', shippedAt: new Date('2026-05-03'), deliveredAt: new Date('2026-05-05') } });
-      await prisma.invoice.create({ data: { orderId: order1.id, invoiceNumber: 'INV-20260501-0001', issuedAt: new Date('2026-05-02') } });
+      await prisma.payment.create({
+        data: {
+          orderId: order1.id,
+          paymentMethod: 'BANK_TRANSFER',
+          paymentGateway: 'DUMMY',
+          paymentStatus: 'VERIFIED',
+          amount: order1.totalAmount,
+          paidAt: new Date('2026-05-02'),
+          verifiedAt: new Date('2026-05-02'),
+          verifiedBy: admin.id,
+          gatewayTransactionId: 'TXN-BANK-20260502-0001',
+          gatewayResponse: { bank: 'BCA', vaNumber: '1234567890' },
+        },
+      });
+      const shipment = await prisma.shipment.create({
+        data: {
+          orderId: order1.id,
+          staffId: staffRecord1.id,
+          courier: 'JNE',
+          trackingNumber: 'JNE1234567890',
+          estimatedDelivery: new Date('2026-05-04'),
+          status: 'DELIVERED',
+          shippedAt: new Date('2026-05-03'),
+          deliveredAt: new Date('2026-05-05'),
+        },
+      });
+      await prisma.shipmentHistory.create({ data: { shipmentId: shipment.id, status: 'PENDING', notes: 'Order confirmed, preparing shipment', location: 'Optic Luxe Warehouse', createdBy: staffRecord1.userId } });
+      await prisma.shipmentHistory.create({ data: { shipmentId: shipment.id, status: 'PICKED_UP', notes: 'Package picked up by JNE courier', location: 'Jakarta Hub', createdBy: staffRecord1.userId } });
+      await prisma.shipmentHistory.create({ data: { shipmentId: shipment.id, status: 'IN_TRANSIT', notes: 'In transit to destination city', location: 'Surabaya Sorting Center', createdBy: staffRecord1.userId } });
+      await prisma.shipmentHistory.create({ data: { shipmentId: shipment.id, status: 'OUT_FOR_DELIVERY', notes: 'Out for delivery', location: 'Jakarta Selatan', createdBy: staffRecord1.userId } });
+      await prisma.shipmentHistory.create({ data: { shipmentId: shipment.id, status: 'DELIVERED', notes: 'Delivered to recipient', location: 'Jl. Sudirman No. 123', createdBy: staffRecord1.userId } });
+      await prisma.invoice.create({
+        data: {
+          orderId: order1.id,
+          invoiceNumber: 'INV/2026/0001',
+          issuedAt: new Date('2026-05-02'),
+          paidAt: new Date('2026-05-02'),
+          totalAmount: order1.totalAmount,
+          status: 'PAID',
+        },
+      });
     }
   }
 
-  if (thirdProd && addr) {
+  if (thirdProd && addrSarah) {
     const v3 = await prisma.productVariant.findFirst({ where: { productId: thirdProd.id } });
     if (v3) {
       const price3 = thirdProd.basePrice * 2;
-      const order2 = await prisma.order.create({ data: { orderNumber: 'ORD-20260520-0002', userId: customer.id, addressId: addr.id, status: 'PENDING', subtotal: price3, shippingCost: 0, discountAmount: 0, totalAmount: price3, shippingMethod: 'STANDARD', shippingName: 'Sarah', shippingPhone: '081234567892', shippingAddress: addr.address, shippingCity: addr.city, shippingProvince: addr.province, shippingPostal: addr.postalCode, createdAt: new Date('2026-05-20') } });
-      await prisma.orderItem.create({ data: { orderId: order2.id, productId: thirdProd.id, variantId: v3.id, quantity: 2, unitPrice: thirdProd.basePrice, totalPrice: price3 } });
-      await prisma.payment.create({ data: { orderId: order2.id, paymentMethod: 'E_WALLET', paymentStatus: 'PENDING', amount: order2.totalAmount } });
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-20260520-0002',
+          userId: customer.id,
+          addressId: addrSarah.id,
+          status: 'PENDING',
+          saleChannel: 'ONLINE',
+          subtotal: price3,
+          shippingCost: 0,
+          discountAmount: 0,
+          totalAmount: price3,
+        },
+      });
     }
   }
 
-  // ── Wishlist ──
+  if (fifthProd) {
+    const v5 = await prisma.productVariant.findFirst({ where: { productId: fifthProd.id } });
+    if (v5) {
+      const price5 = fifthProd.basePrice;
+      await prisma.order.create({
+        data: {
+          orderNumber: 'ORD-20260522-0003',
+          userId: customer2.id,
+          status: 'PROCESSING',
+          saleChannel: 'ONLINE',
+          subtotal: price5,
+          shippingCost: 15000,
+          discountAmount: 0,
+          totalAmount: price5 + 15000,
+        },
+      });
+    }
+  }
+
   const wl1 = await prisma.product.findFirst({ where: { isFeatured: true } });
   const wl2 = await prisma.product.findFirst({ where: { isBestSeller: true, isFeatured: false } });
-  if (wl1) await prisma.wishlistItem.create({ data: { userId: customer.id, productId: wl1.id } });
-  if (wl2) await prisma.wishlistItem.create({ data: { userId: customer.id, productId: wl2.id } });
+  if (wl1) await prisma.wishlistItem.create({ data: { userId: customer.id, productId: wl1.id, addedAt: new Date() } });
+  if (wl2) await prisma.wishlistItem.create({ data: { userId: customer.id, productId: wl2.id, addedAt: new Date() } });
 
-  // ── Site config ──
-  await prisma.siteConfig.create({ data: { siteName: 'Optic Luxe', tagline: 'See the World in Style', heroTitle: 'Discover Your Perfect Frame', heroSubtitle: 'Premium eyewear crafted for clarity, comfort, and confidence.', aboutText: 'Optic Luxe brings together exceptional craftsmanship and modern design. Founded in 2010, we curate the finest eyewear from around the world.', contactEmail: 'hello@opticluxe.com', contactPhone: '+62 21 1234 5678', socialIg: '@opticluxe', socialFb: 'opticluxe', socialTw: '@opticluxe' } });
+  await prisma.procurement.create({
+    data: {
+      poNumber: 'PO-20260501-0001',
+      supplier: 'Luxottica Indonesia',
+      status: 'RECEIVED',
+      totalAmount: 12500000,
+      notes: 'Restock order for bestsellers',
+      orderedAt: new Date('2026-04-15'),
+      receivedAt: new Date('2026-04-25'),
+      createdBy: admin.id,
+      receivedBy: staff1.id,
+      items: {
+        create: [
+          { productId: firstProd!.id, quantity: 50, receivedQty: 50, unitPrice: 250000, totalPrice: 12500000 },
+        ],
+      },
+    },
+  });
 
-  console.log('✅ Seed complete!');
-  console.log(`📦 ${products.length} products across 4 categories`);
-  console.log('📧 admin@opticluxe.com / password123 (ADMIN)');
-  console.log('📧 staff@opticluxe.com / password123 (STAFF)');
-  console.log('📧 customer@opticluxe.com / password123 (CUSTOMER)');
+  const posProduct = await prisma.product.findFirst();
+  const posVariant = posProduct ? await prisma.productVariant.findFirst({ where: { productId: posProduct.id } }) : null;
+  if (posVariant && posProduct) {
+    const offlineSale = await prisma.offlineSale.create({
+      data: {
+        saleNumber: 'POS-20260522-0001',
+        cashierId: staff2.id,
+        staffId: staffRecord2.id,
+        saleChannel: 'WALK_IN',
+        customerName: 'Rina Kapoor',
+        customerPhone: '081234556677',
+        subtotal: posProduct.basePrice,
+        discountAmount: 0,
+        totalAmount: posProduct.basePrice,
+        paymentMethod: 'CASH',
+        paymentStatus: 'PAID',
+      },
+    });
+    await prisma.offlineSaleItem.create({
+      data: {
+        saleId: offlineSale.id,
+        productId: posProduct.id,
+        variantId: posVariant.id,
+        quantity: 1,
+        unitPrice: posProduct.basePrice,
+        totalPrice: posProduct.basePrice,
+      },
+    });
+  }
+
+  await prisma.siteConfig.create({
+    data: {
+      siteName: 'Optic Luxe',
+      tagline: 'See the World in Style',
+      heroTitle: 'Discover Your Perfect Frame',
+      heroSubtitle: 'Premium eyewear crafted for clarity, comfort, and confidence.',
+      aboutText: 'Optic Luxe brings together exceptional craftsmanship and modern design.',
+      contactEmail: 'hello@opticluxe.com',
+      contactPhone: '+62 21 1234 5678',
+      socialIg: '@opticluxe',
+      socialFb: 'opticluxe',
+      socialTw: '@opticluxe',
+    },
+  });
+
+  console.log('Seed complete!');
+  console.log(`${products.length} products across 6 categories (incl. Sunglasses subcategories)`);
+  console.log('admin@opticluxe.com / password123 (ADMIN)');
+  console.log('staff@opticluxe.com / password123 (STAFF)');
+  console.log('cashier@opticluxe.com / password123 (CASHIER)');
+  console.log('customer@opticluxe.com / password123 (CUSTOMER)');
 }
 
 main()
