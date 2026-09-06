@@ -20,7 +20,7 @@ export function StatCard({ title, value, icon, trend, className }: StatCardProps
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl border border-brand-100 p-6 shadow-sm",
+        "bg-brand-100 rounded-2xl border border-brand-100 p-6 shadow-sm",
         className
       )}
     >

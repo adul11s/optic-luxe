@@ -29,7 +29,7 @@ export function Table<T extends { id: string }>({
 }: TableProps<T>) {
   if (isLoading) {
     return (
-      <div className={cn("bg-white rounded-2xl border border-brand-100 overflow-hidden", className)}>
+      <div className={cn("bg-brand-100 rounded-2xl border border-brand-100 overflow-hidden", className)}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -66,14 +66,14 @@ export function Table<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-brand-100 p-12 text-center">
+      <div className="bg-brand-100 rounded-2xl border border-brand-100 p-12 text-center">
         <p className="text-brand-500">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <div className={cn("bg-white rounded-2xl border border-brand-100 overflow-hidden", className)}>
+    <div className={cn("bg-brand-100 rounded-2xl border border-brand-100 overflow-hidden", className)}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>

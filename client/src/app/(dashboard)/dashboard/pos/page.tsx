@@ -13,6 +13,7 @@ import {
   Modal, ModalHeader, ModalBody, ModalFooter, Pagination,
 } from "@/components/ui";
 import { authGet, authPost } from "@/lib/api";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export default function POSPage() {
 
   const { data: sales } = useQuery({
     queryKey: ["pos", "sales", salesPage],
-    queryFn: () => authGet<{ data: OfflineSale[] }>("/pos/sales", { params: { page: salesPage, limit: 10 } }),
+    queryFn: () => authGet<{ data: OfflineSale[]; meta: { total: number; page: number; limit: number; totalPages: number } }>("/pos/sales", { params: { page: salesPage, limit: 10 } }),
   });
 
   const { data: dashboard } = useQuery({
@@ -68,6 +69,10 @@ export default function POSPage() {
       setCustomerPhone("");
       queryClient.invalidateQueries({ queryKey: ["pos"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
+      swalSuccess("Sale completed");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -116,8 +121,14 @@ export default function POSPage() {
   const subtotal = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0);
   const total = subtotal;
 
-  const submitSale = () => {
+  const submitSale = async () => {
     if (cart.length === 0) return;
+    const ok = await swalConfirm({
+      title: "Complete sale?",
+      text: `Confirm the total of ${formatPrice(total)} and complete the sale.`,
+      confirmText: "Yes, complete",
+    });
+    if (!ok) return;
     createSale.mutate({
       items: cart.map(c => ({ variantId: c.variantId, quantity: c.quantity })),
       customerName: customerName || undefined,
@@ -170,7 +181,7 @@ export default function POSPage() {
                   leftIcon={<Search className="w-4 h-4" />}
                 />
                 {isSearchOpen && searchTerm && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-brand-100 border border-brand-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
                     {products.length > 0 ? (
                       products.slice(0, 20).map((p: any) => (
                         <button

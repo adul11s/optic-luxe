@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Search, AlertTriangle, Package, Check, Edit2 } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Modal, ModalHeader, ModalBody, ModalFooter, Table, TableColumn, Pagination } from "@/components/ui";
 import { authGet, authPut } from "@/lib/api";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import { formatPrice } from "@/lib/utils";
 import type { Product, ProductVariant } from "@/types";
 
@@ -40,6 +41,10 @@ export default function InventoryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setEditingVariant(null);
+      swalSuccess("Stock updated");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -252,8 +257,14 @@ export default function InventoryPage() {
             Cancel
           </Button>
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (editingVariant) {
+                const ok = await swalConfirm({
+                  title: "Update stock?",
+                  text: `Update ${editingVariant.product?.name || "variant"} (${editingVariant.colorName || editingVariant.sku}) stock to ${newStock}?`,
+                  confirmText: "Yes, save",
+                });
+                if (!ok) return;
                 updateStock.mutate({ variantId: editingVariant.id, stockQty: newStock });
               }
             }}

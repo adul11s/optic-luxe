@@ -23,8 +23,11 @@ import {
   Warehouse,
   Store,
   Search,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Button, Badge, Input } from "@/components/ui";
+import { useTheme } from "@/lib/theme-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isLoading, isHydrated } = useAuth();
+  const { theme, toggle } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -148,7 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-brand-50 flex">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-brand-100 transform transition-transform duration-300 lg:translate-x-0 lg:static",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-brand-100 border-r border-brand-100 transform transition-transform duration-300 lg:translate-x-0 lg:static",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -184,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="text-sm"
               />
               {isSearchOpen && searchTerm && filteredNavItems.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-brand-100 border border-brand-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
                   {filteredNavItems.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -211,7 +215,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               )}
               {isSearchOpen && searchTerm && filteredNavItems.length === 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 px-4 py-3 text-sm text-brand-500">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-brand-100 border border-brand-200 rounded-xl shadow-lg z-50 px-4 py-3 text-sm text-brand-500">
                   No results found
                 </div>
               )}
@@ -248,6 +252,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="p-4 border-t border-brand-100 space-y-1">
+            <button
+              onClick={toggle}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-brand-600 hover:bg-brand-100 hover:text-brand-950 transition-colors"
+            >
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </button>
             <Link
               href="/home"
               className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-brand-600 hover:bg-brand-100 transition-colors"
@@ -267,7 +278,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-brand-100">
+        <header className="sticky top-0 z-40 bg-brand-100/80 backdrop-blur-md border-b border-brand-100">
           <div className="flex items-center justify-between px-4 md:px-6 h-16">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
