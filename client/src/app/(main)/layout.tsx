@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X, ShoppingBag, User, Heart, Search } from "lucide-react";
+import { Menu, X, ShoppingBag, User, Heart, Search, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/lib/auth-provider";
+import { useTheme } from "@/lib/theme-provider";
 import { Button } from "@/components/ui";
 
 const navigation = [
@@ -18,6 +19,7 @@ const navigation = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggle } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -55,6 +57,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             >
               <Search className="w-5 h-5" />
             </Link>
+
+            <button
+              onClick={toggle}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              className="p-2 text-brand-600 hover:text-brand-950 transition-colors"
+            >
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
 
             <Link
               href="/wishlist"
@@ -101,6 +111,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {isMobileMenuOpen && (
           <div className="md:hidden bg-brand-100 border-t border-brand-100">
             <div className="container-wide py-4 space-y-2">
+              <button
+                onClick={() => { toggle(); setIsMobileMenuOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 rounded-lg"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </button>
               {navigation.map((item) => (
                 <Link
                   key={item.name}

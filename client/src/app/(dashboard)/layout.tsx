@@ -23,8 +23,11 @@ import {
   Warehouse,
   Store,
   Search,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Button, Badge, Input } from "@/components/ui";
+import { useTheme } from "@/lib/theme-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isLoading, isHydrated } = useAuth();
+  const { theme, toggle } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -248,6 +252,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="p-4 border-t border-brand-100 space-y-1">
+            <button
+              onClick={toggle}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-brand-600 hover:bg-brand-100 hover:text-brand-950 transition-colors"
+            >
+              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {theme === "dark" ? "Light mode" : "Dark mode"}
+            </button>
             <Link
               href="/home"
               className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-brand-600 hover:bg-brand-100 transition-colors"
