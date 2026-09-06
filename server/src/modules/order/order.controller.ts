@@ -7,7 +7,7 @@ import { InsufficientStockError, ConcurrentUpdateError } from '../../core/servic
 
 export async function createOrder(req: Request, res: Response) {
   try {
-    const { addressId, shippingMethod, shippingName, shippingPhone, shippingAddress, shippingCity, shippingProvince, shippingPostal, notes } = req.body;
+    const { addressId, shippingMethod, notes } = req.body;
 
     const cart = await prisma.cart.findUnique({
       where: { userId: req.user!.userId },
@@ -29,11 +29,6 @@ export async function createOrder(req: Request, res: Response) {
     const subtotal = cart.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const shippingCost = shippingMethod === 'EXPRESS' ? 25000 : 10000;
     const totalAmount = subtotal + shippingCost;
-
-    let addr = null;
-    if (addressId) {
-      addr = await prisma.address.findFirst({ where: { id: addressId, userId: req.user!.userId } });
-    }
 
     try {
       await reserveStock({
@@ -58,13 +53,6 @@ export async function createOrder(req: Request, res: Response) {
         subtotal,
         shippingCost,
         totalAmount,
-        shippingName: shippingName || addr?.name,
-        shippingPhone: shippingPhone || addr?.phone,
-        shippingAddress: shippingAddress || addr?.address,
-        shippingCity: shippingCity || addr?.city,
-        shippingProvince: shippingProvince || addr?.province,
-        shippingPostal: shippingPostal || addr?.postalCode,
-        shippingMethod: shippingMethod || 'STANDARD',
         notes,
         items: {
           create: cart.items.map((item) => ({
@@ -107,11 +95,18 @@ export async function getOrders(req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const status = req.query.status as string;
+    const search = (req.query.search as string)?.trim();
     const isAdmin = req.user!.role === 'ADMIN' || req.user!.role === 'STAFF';
 
     const where: any = { isDeleted: false };
     if (!isAdmin) where.userId = req.user!.userId;
     if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: 'insensitive' } },
+        { user: { is: { name: { contains: search, mode: 'insensitive' } } } },
+      ];
+    }
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({

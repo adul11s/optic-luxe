@@ -1,7 +1,7 @@
 import axios from "axios";
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosRequestConfig } from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -39,22 +39,29 @@ api.interceptors.response.use(
 );
 
 export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
   data: T;
-  message?: string;
+  meta?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
 }
 
 export interface PaginatedResponse<T> {
   data: T[];
-  pagination: {
+  meta: {
+    total: number;
     page: number;
     limit: number;
-    total: number;
     totalPages: number;
   };
 }
 
-export async function get<T>(url: string, params?: Record<string, unknown>): Promise<T> {
-  const response = await api.get(url, { params });
+export async function get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  const response = await api.get(url, config);
   return response.data;
 }
 
@@ -73,9 +80,9 @@ export async function del<T>(url: string): Promise<T> {
   return response.data;
 }
 
-export async function authGet<T>(url: string, params?: Record<string, unknown>): Promise<T> {
+export async function authGet<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
   const instance = getApiWithAuth();
-  const response = await instance.get(url, { params });
+  const response = await instance.get(url, config);
   return response.data;
 }
 
