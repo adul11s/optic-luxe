@@ -7,6 +7,7 @@ import { Search, Plus, Edit2, Trash2, Shield, UserCheck, UserX } from "lucide-re
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import { authGet, authPut, authDelete } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import type { PaginatedResponse } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import type { User, Role } from "@/types";
@@ -42,12 +43,24 @@ export default function UsersPage() {
   const updateUser = useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) =>
       authPut(`/users/${userId}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      swalSuccess("User updated");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
+    },
   });
 
   const deleteUser = useMutation({
     mutationFn: (userId: string) => authDelete(`/users/${userId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      swalSuccess("User deleted");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
+    },
   });
 
   const users = (usersData?.data || []) as User[];
@@ -108,17 +121,30 @@ export default function UsersPage() {
       render: (user) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => updateUser.mutate({ userId: user.id, data: { isActive: !user.isActive } })}
+            onClick={async () => {
+              const ok = await swalConfirm({
+                title: user.isActive ? "Deactivate user?" : "Activate user?",
+                text: `This will ${user.isActive ? "deactivate" : "activate"} ${user.name}'s account.`,
+                confirmText: "Yes, save",
+              });
+              if (!ok) return;
+              updateUser.mutate({ userId: user.id, data: { isActive: !user.isActive } });
+            }}
             className="p-2 text-brand-600 hover:bg-brand-100 rounded-lg transition-colors"
             title={user.isActive ? "Deactivate" : "Activate"}
           >
             {user.isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
           </button>
           <button
-            onClick={() => {
-              if (confirm("Are you sure you want to delete this user?")) {
-                deleteUser.mutate(user.id);
-              }
+            onClick={async () => {
+              const ok = await swalConfirm({
+                title: "Delete user?",
+                text: "This action cannot be undone.",
+                danger: true,
+                confirmText: "Yes, delete",
+              });
+              if (!ok) return;
+              deleteUser.mutate(user.id);
             }}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >

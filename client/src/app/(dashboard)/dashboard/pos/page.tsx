@@ -13,6 +13,7 @@ import {
   Modal, ModalHeader, ModalBody, ModalFooter, Pagination,
 } from "@/components/ui";
 import { authGet, authPost } from "@/lib/api";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,10 @@ export default function POSPage() {
       setCustomerPhone("");
       queryClient.invalidateQueries({ queryKey: ["pos"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
+      swalSuccess("Sale completed");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -116,8 +121,14 @@ export default function POSPage() {
   const subtotal = cart.reduce((sum, c) => sum + c.unitPrice * c.quantity, 0);
   const total = subtotal;
 
-  const submitSale = () => {
+  const submitSale = async () => {
     if (cart.length === 0) return;
+    const ok = await swalConfirm({
+      title: "Complete sale?",
+      text: `Confirm the total of ${formatPrice(total)} and complete the sale.`,
+      confirmText: "Yes, complete",
+    });
+    if (!ok) return;
     createSale.mutate({
       items: cart.map(c => ({ variantId: c.variantId, quantity: c.quantity })),
       customerName: customerName || undefined,

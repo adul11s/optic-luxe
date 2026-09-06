@@ -7,6 +7,7 @@ import { Eye, Search, Filter, Download, Check, X } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import { authGet, authPut } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import type { PaginatedResponse } from "@/lib/api";
 import { formatPrice, formatOrderStatus, formatDate, formatPaymentStatus } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
@@ -59,6 +60,10 @@ export default function OrdersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       setSelectedOrder(null);
+      swalSuccess("Order status updated");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -250,7 +255,15 @@ export default function OrdersPage() {
                   {orderStatusSteps.map((step) => (
                     <button
                       key={step}
-                      onClick={() => updateStatus.mutate({ orderId: selectedOrder.id, status: step })}
+                      onClick={async () => {
+                        const ok = await swalConfirm({
+                          title: "Update order status?",
+                          text: `Set order ${selectedOrder.orderNumber} to ${formatOrderStatus(step)}?`,
+                          confirmText: "Yes, update",
+                        });
+                        if (!ok) return;
+                        updateStatus.mutate({ orderId: selectedOrder.id, status: step });
+                      }}
                       disabled={step === selectedOrder.status}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${step === selectedOrder.status
                         ? "bg-brand-950 text-white"

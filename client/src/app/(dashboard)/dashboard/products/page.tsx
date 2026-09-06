@@ -7,6 +7,7 @@ import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import { authGet, authDelete } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import type { PaginatedResponse } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { Product, Category } from "@/types";
@@ -48,7 +49,13 @@ export default function ProductsPage() {
 
   const deleteProduct = useMutation({
     mutationFn: (productId: string) => authDelete(`/products/${productId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["products"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      swalSuccess("Product deleted");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
+    },
   });
 
   const products = (productsData?.data || []) as Product[];
@@ -133,10 +140,15 @@ export default function ProductsPage() {
             <Edit2 className="w-4 h-4" />
           </button>
           <button
-            onClick={() => {
-              if (confirm("Are you sure you want to delete this product?")) {
-                deleteProduct.mutate(product.id);
-              }
+            onClick={async () => {
+              const ok = await swalConfirm({
+                title: "Delete product?",
+                text: "This action cannot be undone.",
+                danger: true,
+                confirmText: "Yes, delete",
+              });
+              if (!ok) return;
+              deleteProduct.mutate(product.id);
             }}
             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >

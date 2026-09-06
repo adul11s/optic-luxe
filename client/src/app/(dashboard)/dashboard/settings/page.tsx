@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Settings, Globe, Mail, Phone, Instagram, Facebook, Twitter, Save, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Button, Input } from "@/components/ui";
 import { authGet, authPut } from "@/lib/api";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,10 @@ export default function SettingsPage() {
     mutationFn: (data: Partial<SiteConfig>) => authPut("/site-config", data as Record<string, unknown>),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["site-config"] });
+      swalSuccess("Settings saved");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -94,7 +99,15 @@ export default function SettingsPage() {
         </div>
         <Button
           leftIcon={saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          onClick={() => saveMutation.mutate(form)}
+          onClick={async () => {
+          const ok = await swalConfirm({
+            title: "Save settings?",
+            text: "This will update the site configuration.",
+            confirmText: "Yes, save",
+          });
+          if (!ok) return;
+          saveMutation.mutate(form);
+        }}
           disabled={saveMutation.isPending}
         >
           {saveMutation.isPending ? "Saving..." : "Save Changes"}

@@ -13,6 +13,7 @@ import {
   Modal, ModalHeader, ModalBody, ModalFooter, Pagination,
 } from "@/components/ui";
 import { authGet, authPost } from "@/lib/api";
+import { swalConfirm, swalError, swalSuccess } from "@/lib/swal";
 import { formatPrice, formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,10 @@ export default function WarehouseDashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setShowAdjustModal(false);
       setSelectedVariant(null);
+      swalSuccess("Stock adjusted");
+    },
+    onError: (err: any) => {
+      swalError(err?.response?.data?.message || err?.message || "Something went wrong");
     },
   });
 
@@ -94,8 +99,14 @@ export default function WarehouseDashboardPage() {
     setShowAdjustModal(true);
   };
 
-  const submitAdjust = () => {
+  const submitAdjust = async () => {
     if (!selectedVariant || adjustQty === 0) return;
+    const ok = await swalConfirm({
+      title: "Adjust stock?",
+      text: `This will ${adjustType === "ADD" ? "add" : "reduce"} ${Math.abs(adjustQty)} units to ${selectedVariant.product?.name || "this variant"}.`,
+      confirmText: "Yes, adjust",
+    });
+    if (!ok) return;
     const qty = adjustType === "ADD" ? Math.abs(adjustQty) : -Math.abs(adjustQty);
     adjustStock.mutate({ variantId: selectedVariant.id, quantity: qty, type: adjustType, notes: adjustNotes });
   };
