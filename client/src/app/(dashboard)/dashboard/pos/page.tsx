@@ -50,7 +50,7 @@ export default function POSPage() {
 
   const { data: sales } = useQuery({
     queryKey: ["pos", "sales", salesPage],
-    queryFn: () => authGet<{ data: OfflineSale[] }>("/pos/sales", { params: { page: salesPage, limit: 10 } }),
+    queryFn: () => authGet<{ data: OfflineSale[]; meta: { total: number; page: number; limit: number; totalPages: number } }>("/pos/sales", { params: { page: salesPage, limit: 10 } }),
   });
 
   const { data: dashboard } = useQuery({

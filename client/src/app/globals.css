@@ -6,6 +6,32 @@
   :root {
     --font-sans: "Söhne", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-serif: "Söhne Display", Georgia, "Times New Roman", serif;
+
+    --brand-50: 250 249 247;
+    --brand-100: 245 243 239;
+    --brand-200: 232 228 221;
+    --brand-300: 212 205 194;
+    --brand-400: 184 175 158;
+    --brand-500: 154 142 121;
+    --brand-600: 133 120 104;
+    --brand-700: 109 99 86;
+    --brand-800: 90 81 71;
+    --brand-900: 74 67 57;
+    --brand-950: 40 36 32;
+  }
+
+  .dark {
+    --brand-50: 15 17 23;
+    --brand-100: 24 27 36;
+    --brand-200: 30 34 49;
+    --brand-300: 37 42 58;
+    --brand-400: 86 92 110;
+    --brand-500: 107 113 133;
+    --brand-600: 154 160 180;
+    --brand-700: 169 174 189;
+    --brand-800: 195 199 211;
+    --brand-900: 213 216 224;
+    --brand-950: 232 234 237;
   }
 
   html {
