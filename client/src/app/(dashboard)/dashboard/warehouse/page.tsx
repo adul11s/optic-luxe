@@ -10,7 +10,7 @@ import {
 import {
   Button, Card, CardHeader, CardTitle, CardContent,
   Badge, Input, Select, Table, TableColumn, StatCard,
-  Modal, ModalHeader, ModalBody, ModalFooter,
+  Modal, ModalHeader, ModalBody, ModalFooter, Pagination,
 } from "@/components/ui";
 import { authGet, authPost } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -41,6 +41,10 @@ export default function WarehouseDashboardPage() {
   const [adjustQty, setAdjustQty] = useState(0);
   const [adjustType, setAdjustType] = useState("ADD");
   const [adjustNotes, setAdjustNotes] = useState("");
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [movementsPage, setMovementsPage] = useState(1);
+  const inventoryLimit = 15;
+  const movementsLimit = 10;
 
   const { data: inventory } = useQuery({
     queryKey: ["warehouse", "inventory"],
@@ -53,8 +57,8 @@ export default function WarehouseDashboardPage() {
   });
 
   const { data: movements } = useQuery({
-    queryKey: ["warehouse", "movements"],
-    queryFn: () => authGet<{ data: { data: MovementItem[]; pagination: any } }>("/warehouse/movements"),
+    queryKey: ["warehouse", "movements", movementsPage],
+    queryFn: () => authGet<{ data: MovementItem[]; meta: { total: number; page: number; limit: number; totalPages: number } }>("/warehouse/movements", { params: { page: movementsPage, limit: movementsLimit } }),
   });
 
   const adjustStock = useMutation({
@@ -67,16 +71,20 @@ export default function WarehouseDashboardPage() {
     },
   });
 
-  const overview = inventory?.data?.data?.overview;
-  const items = inventory?.data?.data?.items || [];
-  const alertItems = alerts?.data?.data || [];
-  const movementItems = movements?.data?.data?.data || [];
+  const overview = inventory?.data?.overview;
+  const items = inventory?.data?.items || [];
+  const alertItems = alerts?.data || [];
+  const movementItems = movements?.data || [];
 
-  const filtered = items.filter(v =>
+  const filtered = items.filter((v: VariantItem) =>
     !searchTerm ||
     v.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const inventoryTotalPages = Math.ceil(filtered.length / inventoryLimit);
+  const paginatedItems = filtered.slice((inventoryPage - 1) * inventoryLimit, inventoryPage * inventoryLimit);
+  const movementsMeta = movements?.meta || { page: 1, limit: 10, total: 0, totalPages: 0 };
 
   const handleAdjust = (variant: VariantItem) => {
     setSelectedVariant(variant);
@@ -157,7 +165,7 @@ export default function WarehouseDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {alertItems.map(a => (
+              {alertItems.map((a: AlertItem) => (
                 <div key={a.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200">
                   <div className={`w-2 h-2 rounded-full ${a.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
                   <div className="flex-1 min-w-0">
@@ -177,18 +185,30 @@ export default function WarehouseDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Inventory</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
           <Input
             placeholder="Search by name or SKU..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             leftIcon={<Search className="w-4 h-4" />}
-            className="max-w-xs"
+            className="h-12 w-full"
           />
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table columns={columns} data={filtered} isLoading={!items.length} emptyMessage="No items found" />
         </CardContent>
       </Card>
+      <Card>
+        <CardContent >
+          <Table columns={columns} data={paginatedItems} isLoading={!items.length} emptyMessage="No items found" />
+        </CardContent>
+      </Card>
+
+      {inventoryTotalPages > 1 && (
+        <Pagination
+          currentPage={inventoryPage}
+          totalPages={inventoryTotalPages}
+          onPageChange={setInventoryPage}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -199,12 +219,12 @@ export default function WarehouseDashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {movementItems.slice(0, 10).map(m => (
+            {movementItems.map((m: MovementItem) => (
               <div key={m.id} className="flex items-center justify-between py-2 border-b border-brand-100 last:border-0">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${m.type.includes('ADD') || m.type.includes('PROCUREMENT') ? 'bg-green-100 text-green-600' : m.type.includes('SOLD') ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'}`}>
                     {m.type.includes('ADD') || m.type.includes('PROCUREMENT') ? <TrendingUp className="w-4 h-4" /> :
-                     m.type.includes('SOLD') ? <TrendingDown className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
+                      m.type.includes('SOLD') ? <TrendingDown className="w-4 h-4" /> : <RefreshCw className="w-4 h-4" />}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-brand-950">{m.variant?.product?.name || 'Unknown'}</p>
@@ -221,6 +241,15 @@ export default function WarehouseDashboardPage() {
             ))}
             {movementItems.length === 0 && <p className="text-brand-500 text-center py-8">No movements recorded yet</p>}
           </div>
+          {movementsMeta.totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={movementsMeta.page}
+                totalPages={movementsMeta.totalPages}
+                onPageChange={setMovementsPage}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

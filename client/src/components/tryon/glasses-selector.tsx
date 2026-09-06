@@ -36,7 +36,6 @@ export function GlassesSelector({ products, activeProductId, onSelect }: Glasses
     <div
       className="w-full overflow-x-auto scrollbar-hide"
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',

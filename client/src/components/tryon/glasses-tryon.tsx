@@ -565,5 +565,4 @@ export function GlassesTryOn({
   );
 }
 
-export { GlassesSelector };
 export type { VariantAsset };

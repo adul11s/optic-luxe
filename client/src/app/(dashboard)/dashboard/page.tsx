@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Button, StatCard, Table, TableColumn } from "@/components/ui";
 import { authGet } from "@/lib/api";
+import type { ApiResponse } from "@/lib/api";
 import { formatPrice, formatOrderStatus, formatDate } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-provider";
 import Link from "next/link";
@@ -29,16 +30,16 @@ const fadeInUp = {
 function AdminDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => authGet<{ data: DashboardStats }>("/dashboard"),
+    queryFn: () => authGet<ApiResponse<DashboardStats>>("/dashboard"),
   });
 
   const { data: recentOrders } = useQuery({
     queryKey: ["orders", "recent"],
-    queryFn: () => authGet<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
+    queryFn: () => authGet<ApiResponse<Order[]>>("/orders", { params: { limit: 5 } }),
   });
 
-  const data = stats?.data?.data;
-  const orders = recentOrders?.data?.data || [];
+  const data = stats?.data;
+  const orders = recentOrders?.data || [];
 
   const orderColumns: TableColumn<Order>[] = [
     {
@@ -155,16 +156,16 @@ function AdminDashboard() {
 function StaffDashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => authGet<{ data: DashboardStats }>("/dashboard"),
+    queryFn: () => authGet<ApiResponse<DashboardStats>>("/dashboard"),
   });
 
   const { data: recentOrders } = useQuery({
     queryKey: ["orders", "recent"],
-    queryFn: () => authGet<{ data: Order[] }>("/orders", { params: { limit: 5 } }),
+    queryFn: () => authGet<ApiResponse<Order[]>>("/orders", { params: { limit: 5 } }),
   });
 
-  const data = stats?.data?.data;
-  const orders = recentOrders?.data?.data || [];
+  const data = stats?.data;
+  const orders = recentOrders?.data || [];
 
   const orderColumns: TableColumn<Order>[] = [
     {
@@ -259,10 +260,10 @@ function StaffDashboard() {
 function CustomerDashboard() {
   const { data: ordersData } = useQuery({
     queryKey: ["orders", "my"],
-    queryFn: () => authGet<{ data: Order[]; pagination: { total: number } }>("/orders"),
+    queryFn: () => authGet<ApiResponse<Order[]>>("/orders"),
   });
 
-  const orders = ordersData?.data?.data || [];
+  const orders = ordersData?.data || [];
   const activeOrders = orders.filter((o: Order) => !["COMPLETED", "CANCELLED"].includes(o.status));
 
   const orderColumns: TableColumn<Order>[] = [
@@ -317,7 +318,7 @@ function CustomerDashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card className="text-center">
-          <p className="text-3xl font-bold text-brand-950">{ordersData?.data?.pagination?.total || 0}</p>
+          <p className="text-3xl font-bold text-brand-950">{ordersData?.meta?.total || 0}</p>
           <p className="text-sm text-brand-500">Total Orders</p>
         </Card>
         <Card className="text-center">
@@ -326,7 +327,7 @@ function CustomerDashboard() {
         </Card>
         <Card className="text-center">
           <p className="text-3xl font-bold text-brand-950">
-            {formatPrice(orders.reduce((sum, o) => sum + o.totalAmount, 0))}
+            {formatPrice(orders.reduce((sum: number, o: Order) => sum + o.totalAmount, 0))}
           </p>
           <p className="text-sm text-brand-500">Total Spent</p>
         </Card>
@@ -335,7 +336,7 @@ function CustomerDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Recent Orders</CardTitle>
-          <Link href="/account/orders">
+          <Link href="/dashboard/orders">
             <Button variant="ghost" size="sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
               View All
             </Button>

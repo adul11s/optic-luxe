@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -59,10 +60,10 @@ export function Pagination({
       </button>
 
       {visiblePages.map((page, index) => (
-        <>
+        <Fragment key={page}>
           {index > 0 && visiblePages[index - 1] !== page - 1 && renderEllipsis(`ellipsis-${page}`)}
           {renderPageButton(page)}
-        </>
+        </Fragment>
       ))}
 
       <button

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Eye, Search, Filter, Download, Check, X } from "lucide-react";
 import { Button, Card, Badge, Input, Select, Pagination, Table, TableColumn, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import { authGet, authPut } from "@/lib/api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
+import type { PaginatedResponse } from "@/lib/api";
 import { formatPrice, formatOrderStatus, formatDate, formatPaymentStatus } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types";
 import Link from "next/link";
@@ -37,14 +39,19 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const limit = 10;
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: ordersData, isLoading } = useQuery({
-    queryKey: ["orders", page, statusFilter, search],
+    queryKey: ["orders", page, statusFilter, debouncedSearch],
     queryFn: () =>
-      authGet<{ data: Order[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>("/orders", {
-        params: { page, limit, status: statusFilter || undefined, search: search || undefined },
+      authGet<PaginatedResponse<Order>>("/orders", {
+        params: { page, limit, status: statusFilter || undefined, search: debouncedSearch || undefined },
       }),
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const updateStatus = useMutation({
     mutationFn: ({ orderId, status }: { orderId: string; status: OrderStatus }) =>
@@ -55,8 +62,8 @@ export default function OrdersPage() {
     },
   });
 
-  const orders = ordersData?.data?.data || [];
-  const pagination = ordersData?.data?.pagination || { page: 1, limit: 10, total: 0, totalPages: 0 };
+  const orders = ordersData?.data || [];
+  const pagination = ordersData?.meta || { page: 1, limit: 10, total: 0, totalPages: 0 };
 
   const columns: TableColumn<Order>[] = [
     {
@@ -147,24 +154,27 @@ export default function OrdersPage() {
       </div>
 
       <Card>
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div className="w-full sm:w-2/3">
             <Input
               placeholder="Search by order number or customer name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               leftIcon={<Search className="w-4 h-4" />}
+              className="h-12 w-full"
             />
           </div>
-          <Select
-            options={statusOptions}
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full md:w-48"
-          />
+          <div className="w-full sm:w-1/3">
+            <Select
+              options={statusOptions}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-12"
+            />
+          </div>
         </div>
 
         <Table columns={columns} data={orders} isLoading={isLoading} emptyMessage="No orders found" />
@@ -242,11 +252,10 @@ export default function OrdersPage() {
                       key={step}
                       onClick={() => updateStatus.mutate({ orderId: selectedOrder.id, status: step })}
                       disabled={step === selectedOrder.status}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        step === selectedOrder.status
-                          ? "bg-brand-950 text-white"
-                          : "bg-brand-100 text-brand-700 hover:bg-brand-200 disabled:opacity-50"
-                      }`}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${step === selectedOrder.status
+                        ? "bg-brand-950 text-white"
+                        : "bg-brand-100 text-brand-700 hover:bg-brand-200 disabled:opacity-50"
+                        }`}
                     >
                       {formatOrderStatus(step)}
                     </button>

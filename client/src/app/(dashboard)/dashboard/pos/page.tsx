@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   ShoppingCart, DollarSign, Users, Search, Plus, Minus,
-  Receipt, CreditCard, Banknote, User, Trash2, Check,
+  Receipt, CreditCard, Banknote, User, Trash2, Check, Package,
 } from "lucide-react";
 import {
   Button, Card, CardHeader, CardTitle, CardContent,
   Badge, Input, Select, Table, TableColumn, StatCard,
-  Modal, ModalHeader, ModalBody, ModalFooter,
+  Modal, ModalHeader, ModalBody, ModalFooter, Pagination,
 } from "@/components/ui";
 import { authGet, authPost } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -39,15 +39,18 @@ export default function POSPage() {
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<OfflineSale | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [salesPage, setSalesPage] = useState(1);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const { data: inventory } = useQuery({
-    queryKey: ["pos", "inventory"],
+    queryKey: ["warehouse", "inventory"],
     queryFn: () => authGet<{ data: { items: any[] } }>("/warehouse/inventory"),
   });
 
   const { data: sales } = useQuery({
-    queryKey: ["pos", "sales"],
-    queryFn: () => authGet<{ data: { data: OfflineSale[]; pagination: any } }>("/pos/sales"),
+    queryKey: ["pos", "sales", salesPage],
+    queryFn: () => authGet<{ data: OfflineSale[] }>("/pos/sales", { params: { page: salesPage, limit: 10 } }),
   });
 
   const { data: dashboard } = useQuery({
@@ -58,7 +61,7 @@ export default function POSPage() {
   const createSale = useMutation({
     mutationFn: (data: any) => authPost("/pos/sale", data),
     onSuccess: (response: any) => {
-      setLastSale(response.data.data);
+      setLastSale(response.data);
       setShowReceipt(true);
       setCart([]);
       setCustomerName("");
@@ -68,7 +71,17 @@ export default function POSPage() {
     },
   });
 
-  const products = inventory?.data?.data?.items?.filter((v: any) =>
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const products = inventory?.data?.items?.filter((v: any) =>
     v.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
@@ -113,8 +126,8 @@ export default function POSPage() {
     });
   };
 
-  const salesData = sales?.data?.data?.data || [];
-  const dashboardData = dashboard?.data?.data || {};
+  const salesData = sales?.data || [];
+  const dashboardData = dashboard?.data || {};
 
   const saleColumns: TableColumn<OfflineSale>[] = [
     { key: "saleNumber", header: "Sale #", render: (s) => <span className="font-mono text-sm">{s.saleNumber}</span> },
@@ -145,27 +158,55 @@ export default function POSPage() {
               <CardTitle>Product Lookup</CardTitle>
             </CardHeader>
             <CardContent>
-              <Input
-                placeholder="Search product name or SKU..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                leftIcon={<Search className="w-4 h-4" />}
-              />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 max-h-64 overflow-y-auto">
-                {products.slice(0, 20).map((p: any) => (
-                  <button
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    className="p-3 border border-brand-200 rounded-xl text-left hover:border-brand-950 transition-colors text-sm"
-                  >
-                    <p className="font-medium text-brand-950 truncate">{p.product?.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      {p.colorHex && <span className="w-3 h-3 rounded-full border" style={{ background: p.colorHex }} />}
-                      <span className="text-xs text-brand-500">{p.colorName}</span>
-                    </div>
-                    <p className="text-xs text-brand-600 mt-1">{formatPrice(p.product?.price)} • {p.stockQty} in stock</p>
-                  </button>
-                ))}
+              <div className="relative" ref={searchRef}>
+                <Input
+                  placeholder="Search product name or SKU..."
+                  value={searchTerm}
+                  onChange={e => {
+                    setSearchTerm(e.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  leftIcon={<Search className="w-4 h-4" />}
+                />
+                {isSearchOpen && searchTerm && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+                    {products.length > 0 ? (
+                      products.slice(0, 20).map((p: any) => (
+                        <button
+                          key={p.id}
+                          onClick={() => {
+                            addToCart(p);
+                            setSearchTerm("");
+                            setIsSearchOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-brand-50 transition-colors first:rounded-t-xl last:rounded-b-xl"
+                        >
+                          <div className="w-10 h-10 bg-brand-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            {p.product?.image ? (
+                              <img src={p.product.image} alt="" className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                              <Package className="w-5 h-5 text-brand-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-brand-950 truncate">{p.product?.name}</p>
+                            <div className="flex items-center gap-2">
+                              {p.colorHex && <span className="w-2.5 h-2.5 rounded-full border" style={{ background: p.colorHex }} />}
+                              <span className="text-xs text-brand-500">{p.colorName} • {p.sku}</span>
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-semibold text-brand-950">{formatPrice(p.product?.price)}</p>
+                            <p className="text-xs text-brand-500">{p.stockQty} in stock</p>
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-brand-500">No products found</div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -178,6 +219,13 @@ export default function POSPage() {
               <Table columns={saleColumns} data={salesData} emptyMessage="No offline sales yet" />
             </CardContent>
           </Card>
+          {sales?.meta && sales.meta.totalPages > 1 && (
+            <Pagination
+              currentPage={salesPage}
+              totalPages={sales.meta.totalPages}
+              onPageChange={setSalesPage}
+            />
+          )}
         </div>
 
         <div>
