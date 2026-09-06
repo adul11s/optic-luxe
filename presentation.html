@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optic Luxe — Premium Eyewear Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2231;--bg4:#252a3a;
+  --text:#e8eaed;--text2:#9aa0b4;--text3:#6b7185;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.25);
+  --green:#00b894;--green-bg:rgba(0,184,148,.12);
+  --amber:#fdcb6e;--amber-bg:rgba(253,203,110,.12);
+  --red:#e17055;--red-bg:rgba(225,112,85,.12);
+  --blue:#74b9ff;--blue-bg:rgba(116,185,255,.12);
+  --card:#1a1e2e;--card-border:#2a2f42;
+  --radius:12px;--radius-sm:8px;
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── Slide Container ── */
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 80px;opacity:0;visibility:hidden;transition:opacity .5s ease,transform .5s ease;transform:translateX(40px)}
+.slide.active{opacity:1;visibility:visible;transform:translateX(0)}
+.slide.exit-left{opacity:0;visibility:hidden;transform:translateX(-40px)}
+
+/* ── Navigation ── */
+.nav{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:100;align-items:center}
+.nav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--card-border);background:var(--bg2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s}
+.nav button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.nav button:disabled{opacity:.3;cursor:default}
+.dots{display:flex;gap:6px;margin:0 12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bg4);border:none;cursor:pointer;transition:all .3s}
+.dot.active{background:var(--accent);width:24px;border-radius:4px}
+.slide-counter{font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums;min-width:40px;text-align:center}
+
+/* ── Typography ── */
+.headline{font-size:clamp(32px,5vw,56px);font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.subhead{font-size:clamp(16px,2vw,22px);color:var(--text2);font-weight:400;line-height:1.5;max-width:680px}
+.label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent2)}
+.gradient-text{background:linear-gradient(135deg,var(--accent),var(--accent2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── Grid Layouts ── */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;width:100%;max-width:1200px}
+.split-wide{display:grid;grid-template-columns:1.1fr .9fr;gap:50px;align-items:center;width:100%;max-width:1200px}
+.cols-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:100%;max-width:1100px}
+.cols-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;width:100%;max-width:1100px}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:28px;transition:all .3s}
+.card:hover{border-color:var(--accent);box-shadow:0 0 30px var(--accent-glow)}
+.card-stat{text-align:center;padding:32px 20px}
+.card-stat .number{font-size:42px;font-weight:800;letter-spacing:-.02em}
+.card-stat .desc{font-size:13px;color:var(--text2);margin-top:6px}
+.card-feature{padding:24px;display:flex;gap:16px;align-items:flex-start}
+.card-feature .icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.card-feature h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.card-feature p{font-size:13px;color:var(--text2);line-height:1.5}
+
+/* ── Bullet List ── */
+.bullets{list-style:none;display:flex;flex-direction:column;gap:14px}
+.bullets li{display:flex;align-items:flex-start;gap:12px;font-size:16px;color:var(--text2);line-height:1.5}
+.bullets li::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:7px;flex-shrink:0}
+
+/* ── Browser Frame ── */
+.browser{background:var(--bg3);border-radius:var(--radius);border:1px solid var(--card-border);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.browser-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--card-border)}
+.browser-dots{display:flex;gap:6px}
+.browser-dots span{width:10px;height:10px;border-radius:50%}
+.browser-dots span:nth-child(1){background:#ff5f57}
+.browser-dots span:nth-child(2){background:#febc2e}
+.browser-dots span:nth-child(3){background:#28c840}
+.browser-url{flex:1;margin-left:12px;background:var(--bg);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--text3)}
+.browser-body{padding:0;min-height:300px;overflow:hidden}
+
+/* ── Mock UI: Sidebar ── */
+.mock-layout{display:flex;min-height:320px}
+.mock-sidebar{width:180px;background:var(--bg2);border-right:1px solid var(--card-border);padding:16px 0;flex-shrink:0}
+.mock-sidebar .logo{padding:0 16px 14px;font-size:14px;font-weight:700;color:var(--accent2);border-bottom:1px solid var(--card-border);margin-bottom:8px}
+.mock-sidebar .nav-item{padding:8px 16px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;cursor:default}
+.mock-sidebar .nav-item.active{background:var(--accent-glow);color:var(--accent2);border-right:2px solid var(--accent)}
+.mock-sidebar .nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600}
+.mock-content{flex:1;padding:20px;overflow:hidden}
+.mock-content .page-title{font-size:16px;font-weight:700;margin-bottom:16px}
+
+/* ── Mock UI: Stats Row ── */
+.mock-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.mock-stat-card{background:var(--bg);border:1px solid var(--card-border);border-radius:8px;padding:12px}
+.mock-stat-card .val{font-size:20px;font-weight:700}
+.mock-stat-card .lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Mock UI: Table ── */
+.mock-table{width:100%;border-collapse:collapse;font-size:11px}
+.mock-table th{text-align:left;padding:8px 10px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--card-border);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+.mock-table td{padding:8px 10px;border-bottom:1px solid var(--card-border);color:var(--text2)}
+.mock-table tr:last-child td{border-bottom:none}
+.mock-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:600}
+.mock-badge.green{background:var(--green-bg);color:var(--green)}
+.mock-badge.amber{background:var(--amber-bg);color:var(--amber)}
+.mock-badge.red{background:var(--red-bg);color:var(--red)}
+.mock-badge.blue{background:var(--blue-bg);color:var(--blue)}
+
+/* ── Mock UI: Shop ── */
+.mock-shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mock-product{background:var(--bg);border:1px solid var(--card-border);border-radius:8px;overflow:hidden}
+.mock-product .img{height:80px;background:linear-gradient(135deg,var(--bg3),var(--bg4));display:flex;align-items:center;justify-content:center;font-size:28px}
+.mock-product .info{padding:8px}
+.mock-product .info .name{font-size:10px;font-weight:600;color:var(--text)}
+.mock-product .info .price{font-size:11px;font-weight:700;color:var(--accent2);margin-top:2px}
+
+/* ── Mock UI: Chart Bars ── */
+.mock-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding:12px 0}
+.mock-bar{flex:1;border-radius:4px 4px 0 0;transition:height .3s;position:relative}
+.mock-bar::after{content:attr(data-label);position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--text3);white-space:nowrap}
+
+/* ── Mock UI: Product Page ── */
+.mock-product-page{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}
+.mock-gallery{background:var(--bg);border:1px solid var(--card-border);border-radius:8px;height:180px;display:flex;align-items:center;justify-content:center;font-size:48px}
+.mock-detail .title{font-size:14px;font-weight:700;margin-bottom:4px}
+.mock-detail .price{font-size:18px;font-weight:800;color:var(--accent2);margin-bottom:8px}
+.mock-detail .colors{display:flex;gap:6px;margin-bottom:10px}
+.mock-detail .color-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--card-border);cursor:default}
+.mock-detail .btn{background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:6px;font-size:11px;font-weight:600;cursor:default}
+
+/* ── Mock UI: POS ── */
+.mock-pos{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;padding:14px}
+.mock-pos-products{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mock-pos-item{background:var(--bg);border:1px solid var(--card-border);border-radius:6px;padding:10px;text-align:center;font-size:10px;cursor:default}
+.mock-pos-item .emoji{font-size:22px;margin-bottom:4px}
+.mock-pos-cart{background:var(--bg2);border:1px solid var(--card-border);border-radius:8px;padding:14px}
+.mock-pos-cart h5{font-size:12px;font-weight:600;margin-bottom:10px;color:var(--accent2)}
+.mock-pos-cart .line{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--card-border)}
+.mock-pos-cart .total{font-size:13px;font-weight:700;color:var(--text);padding-top:8px;margin-top:4px;border-top:2px solid var(--accent)}
+
+/* ── Step List ── */
+.steps{display:flex;flex-direction:column;gap:16px}
+.step{display:flex;gap:14px;align-items:flex-start}
+.step-num{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.step-text h4{font-size:15px;font-weight:600;margin-bottom:2px}
+.step-text p{font-size:13px;color:var(--text2);line-height:1.4}
+
+/* ── CTA Buttons ── */
+.cta-group{display:flex;gap:14px;margin-top:28px}
+.btn-cta{padding:14px 32px;border-radius:10px;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:all .3s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 20px var(--accent-glow)}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-2px)}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--card-border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent2)}
+
+/* ── Tech Tags ── */
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.tag{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;background:var(--bg3);border:1px solid var(--card-border);color:var(--text2)}
+.tag.highlight{border-color:var(--accent);color:var(--accent2);background:var(--accent-glow)}
+
+/* ── Flow Diagram ── */
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:20px}
+.flow-step{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:10px 16px;font-size:12px;font-weight:600;text-align:center;min-width:90px}
+.flow-step.active-step{border-color:var(--accent);background:var(--accent-glow);color:var(--accent2)}
+.flow-arrow{color:var(--text3);font-size:16px}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.slide.active .animate{animation:fadeUp .6s ease both}
+.slide.active .animate.d1{animation-delay:.1s}
+.slide.active .animate.d2{animation-delay:.2s}
+.slide.active .animate.d3{animation-delay:.3s}
+.slide.active .animate.d4{animation-delay:.4s}
+.slide.active .animate.d5{animation-delay:.5s}
+
+/* ── Progress Bar ── */
+.progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--blue));z-index:200;transition:width .4s ease}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .slide{padding:30px 24px}
+  .split,.split-wide{grid-template-columns:1fr;gap:30px}
+  .cols-3,.cols-4{grid-template-columns:1fr 1fr}
+  .mock-sidebar{display:none}
+  .mock-layout{flex-direction:column}
+}
+@media(max-width:600px){
+  .cols-3,.cols-4{grid-template-columns:1fr}
+  .mock-shop-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide active" data-slide="0">
+  <div style="text-align:center;max-width:900px">
+    <div class="label animate d1" style="margin-bottom:20px">Full-Stack E-Commerce Platform</div>
+    <h1 class="headline animate d2" style="margin-bottom:16px">
+      <span class="gradient-text">Optic Luxe</span>
+    </h1>
+    <p class="subhead animate d3" style="margin:0 auto 32px">
+      A premium eyewear platform featuring virtual AR try-on, real-time inventory management, POS system, and a complete order-to-delivery pipeline.
+    </p>
+    <div class="tags animate d4" style="justify-content:center">
+      <span class="tag highlight">Next.js 15</span>
+      <span class="tag highlight">Express + TypeScript</span>
+      <span class="tag highlight">Prisma / PostgreSQL</span>
+      <span class="tag">React Three Fiber</span>
+      <span class="tag">MediaPipe AR</span>
+      <span class="tag">TailwindCSS</span>
+    </div>
+    <div class="animate d5" style="margin-top:40px;color:var(--text3);font-size:13px">
+      Optic Luxe Team &nbsp;·&nbsp; 2026
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 2 — PROBLEM / OVERVIEW
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide" data-slide="1">
+  <div style="width:100%;max-width:1100px">
+    <div class="label animate d1">The Problem</div>
+    <h2 class="headline animate d2" style="font-size:clamp(24px,3.5vw,40px);margin:12px 0 32px;text-align:center">
+      Eyewear e-commerce is broken
+    </h2>
+    <div class="cols-3 animate d3" style="gap:24px">
+      <!-- Point 1 -->
+      <div class="card" style="text-align:center;border-top:3px solid var(--red)">
+        <div style="font-size:40px;font-weight:800;color:var(--red);line-height:1">40%</div>
+        <div style="font-size:14px;font-weight:600;margin:10px 0 6px">Return Rate</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5">
+          Customers can't try glasses online. <strong style="color:var(--text)">Fit uncertainty</strong> drives massive returns.
+        </p>
+      </div>
+      <!-- Point 2 -->
+      <div class="card" style="text-align:center;border-top:3px solid var(--amber)">
+        <div style="font-size:40px;font-weight:800;color:var(--amber);line-height:1">24-48h</div>
+        <div style="font-size:14px;font-weight:600;margin:10px 0 6px">Payment Delay</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5">
+          Staff manually verifies each payment. <strong style="color:var(--text)">No automation</strong> means long wait times.
+        </p>
+      </div>
+      <!-- Point 3 -->
+      <div class="card" style="text-align:center;border-top:3px solid var(--blue)">
+        <div style="font-size:40px;font-weight:800;color:var(--blue);line-height:1">3-5×</div>
+        <div style="font-size:14px;font-weight:600;margin:10px 0 6px">Tool Sprawl</div>
+        <p style="font-size:13px;color:var(--text2);line-height:1.5">
+          Online store, POS, warehouse, shipping — all <strong style="color:var(--text)">separate systems</strong> with no shared data.
+        </p>
+      </div>
+    </div>
+    <div class="animate d4" style="margin-top:28px;text-align:center">
+      <div style="display:inline-flex;gap:32px;background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px 32px">
+        <div style="text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--text)">5+</div>
+          <div style="font-size:11px;color:var(--text3)">Problems Identified</div>
+        </div>
+        <div style="width:1px;background:var(--card-border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--accent2)">1</div>
+          <div style="font-size:11px;color:var(--text3)">Unified Solution</div>
+        </div>
+        <div style="width:1px;background:var(--card-border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--green)">↓</div>
+          <div style="font-size:11px;color:var(--text3)">Optic Luxe</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 3 — ARCHITECTURE + APP UI
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide" data-slide="2">
+  <div class="split-wide">
+    <div>
+      <div class="label animate d1">Product Architecture</div>
+      <h2 class="headline animate d2" style="font-size:clamp(22px,3vw,36px);margin:12px 0 20px">
+        One platform, every channel
+      </h2>
+      <p class="animate d3" style="color:var(--text2);font-size:15px;line-height:1.6;margin-bottom:20px">
+        Optic Luxe unifies online e-commerce, walk-in POS, warehouse management, and real-time analytics into a single codebase with shared inventory and order state.
+      </p>
+      <div class="cols-2 animate d4" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="card card-feature" style="padding:16px">
+          <div class="icon" style="background:var(--accent-glow);color:var(--accent2);width:36px;height:36px;font-size:16px">🛍️</div>
+          <div><h4 style="font-size:13px">E-Commerce</h4><p style="font-size:11px">Full catalog, cart, checkout</p></div>
+        </div>
+        <div class="card card-feature" style="padding:16px">
+          <div class="icon" style="background:var(--green-bg);color:var(--green);width:36px;height:36px;font-size:16px">💳</div>
+          <div><h4 style="font-size:13px">POS System</h4><p style="font-size:11px">Walk-in sales, receipts</p></div>
+        </div>
+        <div class="card card-feature" style="padding:16px">
+          <div class="icon" style="background:var(--amber-bg);color:var(--amber);width:36px;height:36px;font-size:16px">📦</div>
+          <div><h4 style="font-size:13px">Warehouse</h4><p style="font-size:11px">Stock tracking, alerts</p></div>
+        </div>
+        <div class="card card-feature" style="padding:16px">
+          <div class="icon" style="background:var(--blue-bg);color:var(--blue);width:36px;height:36px;font-size:16px">📊</div>
+          <div><h4 style="font-size:13px">Analytics</h4><p style="font-size:11px">Revenue, top products</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="animate d5">
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url">opticluxe.com/shop</div>
+        </div>
+        <div class="browser-body" style="background:var(--bg3)">
+          <!-- Mock: Shop page -->
+          <div style="padding:12px 16px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:14px;font-weight:700;color:var(--accent2)">Optic Luxe</div>
+            <div style="display:flex;gap:12px;font-size:10px;color:var(--text3)">
+              <span>Home</span><span style="color:var(--accent2)">Shop</span><span>Collections</span><span>About</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">🛒 3 &nbsp;|&nbsp; 👤 John</div>
+          </div>
+          <div style="padding:12px 16px;display:flex;gap:8px;font-size:9px;color:var(--text3)">
+            <span style="background:var(--accent-glow);color:var(--accent2);padding:3px 8px;border-radius:4px">All</span>
+            <span>Men</span><span>Women</span><span>Unisex</span><span>Kids</span>
+          </div>
+          <div class="mock-shop-grid" style="padding:0 16px 16px">
+            <div class="mock-product">
+              <div class="img">🕶️</div>
+              <div class="info"><div class="name">Aviator Classic</div><div class="price">Rp 1.250.000</div></div>
+            </div>
+            <div class="mock-product">
+              <div class="img">👓</div>
+              <div class="info"><div class="name">Round Vintage</div><div class="price">Rp 890.000</div></div>
+            </div>
+            <div class="mock-product">
+              <div class="img">🥽</div>
+              <div class="info"><div class="name">Cat Eye Luxe</div><div class="price">Rp 1.450.000</div></div>
+            </div>
+            <div class="mock-product">
+              <div class="img">👓</div>
+              <div class="info"><div class="name">Square Titanium</div><div class="price">Rp 1.100.000</div></div>
+            </div>
+            <div class="mock-product">
+              <div class="img">🕶️</div>
+              <div class="info"><div class="name">Wayfarer Pro</div><div class="price">Rp 980.000</div></div>
+            </div>
+            <div class="mock-product">
+              <div class="img">👓</div>
+              <div class="info"><div class="name">Browline Elite</div><div class="price">Rp 1.350.000</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 4 — KEY METRICS DASHBOARD
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide" data-slide="3">
+  <div style="width:100%;max-width:1100px">
+    <div style="text-align:center;margin-bottom:36px">
+      <div class="label animate d1">Key Metrics</div>
+      <h2 class="headline animate d2" style="font-size:clamp(22px,3vw,36px);margin-top:10px">
+        Real-time business intelligence
+      </h2>
+    </div>
+    <div class="cols-4 animate d3">
+      <div class="card card-stat">
+        <div class="number gradient-text">22+</div>
+        <div class="desc">Database Models</div>
+      </div>
+      <div class="card card-stat">
+        <div class="number" style="color:var(--green)">36</div>
+        <div class="desc">Unit Tests Passing</div>
+      </div>
+      <div class="card card-stat">
+        <div class="number" style="color:var(--amber)">40+</div>
+        <div class="desc">API Endpoints</div>
+      </div>
+      <div class="card card-stat">
+        <div class="number" style="color:var(--blue)">3</div>
+        <div class="desc">User Roles</div>
+      </div>
+    </div>
+    <div class="animate d4" style="margin-top:28px">
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url">opticluxe.com/dashboard/analytics</div>
+        </div>
+        <div class="browser-body" style="background:var(--bg3)">
+          <div class="mock-layout" style="min-height:220px">
+            <div class="mock-sidebar" style="width:140px">
+              <div class="logo">Optic Luxe</div>
+              <div class="nav-item">📊 Dashboard</div>
+              <div class="nav-item">🛒 Orders <span class="badge">5</span></div>
+              <div class="nav-item active">📈 Analytics</div>
+              <div class="nav-item">📦 Products</div>
+              <div class="nav-item">👥 Users <span class="badge">24</span></div>
+              <div class="nav-item">⚙️ Settings</div>
+            </div>
+            <div class="mock-content">
+              <div class="page-title">Analytics Overview</div>
+              <div class="mock-stats" style="grid-template-columns:repeat(4,1fr)">
+                <div class="mock-stat-card"><div class="val" style="color:var(--green)">Rp 45.2M</div><div class="lbl">Monthly Revenue</div></div>
+                <div class="mock-stat-card"><div class="val" style="color:var(--accent2)">128</div><div class="lbl">Total Orders</div></div>
+                <div class="mock-stat-card"><div class="val" style="color:var(--amber)">Rp 353K</div><div class="lbl">Avg Order Value</div></div>
+                <div class="mock-stat-card"><div class="val" style="color:var(--blue)">12</div><div class="lbl">Products</div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-top:4px">
+                <div style="background:var(--bg);border:1px solid var(--card-border);border-radius:8px;padding:12px">
+                  <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:8px">Revenue by Month</div>
+                  <div class="mock-chart">
+                    <div class="mock-bar" style="height:40%;background:var(--accent)" data-label="Jan"></div>
+                    <div class="mock-bar" style="height:55%;background:var(--accent)" data-label="Feb"></div>
+                    <div class="mock-bar" style="height:45%;background:var(--accent)" data-label="Mar"></div>
+                    <div class="mock-bar" style="height:70%;background:var(--accent)" data-label="Apr"></div>
+                    <div class="mock-bar" style="height:65%;background:var(--accent)" data-label="May"></div>
+                    <div class="mock-bar" style="height:85%;background:var(--accent2)" data-label="Jun"></div>
+                    <div class="mock-bar" style="height:78%;background:var(--accent)" data-label="Jul"></div>
+                    <div class="mock-bar" style="height:92%;background:var(--accent2)" data-label="Aug"></div>
+                    <div class="mock-bar" style="height:88%;background:var(--accent2)" data-label="Sep"></div>
+                  </div>
+                </div>
+                <div style="background:var(--bg);border:1px solid var(--card-border);border-radius:8px;padding:12px">
+                  <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:8px">Top Products</div>
+                  <div style="font-size:10px;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--card-border)"><span>Aviator Classic</span><span style="color:var(--green)">89 sold</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--card-border)"><span>Round Vintage</span><span style="color:var(--green)">72 sold</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--card-border)"><span>Cat Eye Luxe</span><span style="color:var(--green)">65 sold</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Wayfarer Pro</span><span style="color:var(--green)">58 sold</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 5 — LIVE WORKFLOW
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide" data-slide="4">
+  <div class="split">
+    <div>
+      <div class="label animate d1">Live Workflow</div>
+      <h2 class="headline animate d2" style="font-size:clamp(22px,3vw,34px);margin:12px 0 24px">
+        From browse to delivery
+      </h2>
+      <div class="steps animate d3">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <h4>Browse & Try On</h4>
+            <p>Customer explores the catalog, filters by style, and uses AR virtual try-on with their webcam</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <h4>Cart & Checkout</h4>
+            <p>Adds items to cart, enters shipping address, selects Standard or Express delivery</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <h4>Payment & Verification</h4>
+            <p>Submits payment via Bank Transfer or E-Wallet. Staff verifies and confirms payment</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <h4>Fulfillment</h4>
+            <p>Invoice auto-generated, stock confirmed, shipment created with tracking number</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-text">
+            <h4>Delivery & Review</h4>
+            <p>Package delivered, order completed, customer leaves a product review</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="animate d4">
+      <!-- Order Status Flow -->
+      <div class="browser" style="margin-bottom:16px">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url">Order Lifecycle</div>
+        </div>
+        <div class="browser-body" style="background:var(--bg3);padding:16px">
+          <div class="flow">
+            <div class="flow-step">Pending</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step active-step">Paid</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step active-step">Confirmed</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">Processing</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step">Shipped</div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step" style="border-color:var(--green);color:var(--green)">Completed</div>
+          </div>
+          <div style="margin-top:20px">
+            <div class="page-title" style="font-size:12px">Order #ORD-260906-A1B2</div>
+            <table class="mock-table">
+              <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td>Aviator Classic — Gold</td><td>1</td><td>Rp 1.250.000</td><td><span class="mock-badge green">Paid</span></td></tr>
+                <tr><td>Round Vintage — Black</td><td>2</td><td>Rp 1.780.000</td><td><span class="mock-badge amber">Processing</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg);border:1px solid var(--card-border);border-radius:6px;padding:10px">
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Shipping</div>
+              <div style="font-size:11px;font-weight:600;margin-top:2px">J&T Express — JT001234567</div>
+              <div style="font-size:10px;color:var(--green);margin-top:2px">In Transit</div>
+            </div>
+            <div style="background:var(--bg);border:1px solid var(--card-border);border-radius:6px;padding:10px">
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase">Payment</div>
+              <div style="font-size:11px;font-weight:600;margin-top:2px">Bank Transfer — Verified</div>
+              <div style="font-size:10px;color:var(--green);margin-top:2px">Rp 3.030.000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- POS Mock -->
+      <div class="browser">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url">POS Terminal — Walk-in Sale</div>
+        </div>
+        <div class="browser-body" style="background:var(--bg3)">
+          <div class="mock-pos">
+            <div>
+              <div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:8px">Products</div>
+              <div class="mock-pos-products">
+                <div class="mock-pos-item"><div class="emoji">🕶️</div>Aviator<br>Rp 1.25M</div>
+                <div class="mock-pos-item"><div class="emoji">👓</div>Round<br>Rp 890K</div>
+                <div class="mock-pos-item"><div class="emoji">🥽</div>Cat Eye<br>Rp 1.45M</div>
+                <div class="mock-pos-item"><div class="emoji">👓</div>Square<br>Rp 1.1M</div>
+                <div class="mock-pos-item"><div class="emoji">🕶️</div>Wayfarer<br>Rp 980K</div>
+                <div class="mock-pos-item"><div class="emoji">👓</div>Browline<br>Rp 1.35M</div>
+              </div>
+            </div>
+            <div class="mock-pos-cart">
+              <h5>🛒 Current Sale</h5>
+              <div class="line"><span>Aviator Classic × 1</span><span>Rp 1.250.000</span></div>
+              <div class="line"><span>Round Vintage × 1</span><span>Rp 890.000</span></div>
+              <div class="line" style="border:none"><span>Discount</span><span style="color:var(--red)">− Rp 50.000</span></div>
+              <div class="total"><span>Total</span><span>Rp 2.090.000</span></div>
+              <div style="margin-top:10px;display:flex;gap:6px">
+                <span style="background:var(--green-bg);color:var(--green);padding:4px 10px;border-radius:4px;font-size:9px;font-weight:600">Cash</span>
+                <span style="background:var(--bg);color:var(--text3);padding:4px 10px;border-radius:4px;font-size:9px">Transfer</span>
+                <span style="background:var(--bg);color:var(--text3);padding:4px 10px;border-radius:4px;font-size:9px">E-Wallet</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SLIDE 6 — SUMMARY & CTA
+     ════════════════════════════════════════════════════════════════ -->
+<section class="slide" data-slide="5">
+  <div style="text-align:center;max-width:800px">
+    <div class="label animate d1">Summary</div>
+    <h2 class="headline animate d2" style="font-size:clamp(28px,4vw,48px);margin:12px 0 20px">
+      Ready to <span class="gradient-text">transform</span> eyewear retail?
+    </h2>
+    <p class="subhead animate d3" style="margin:0 auto 32px">
+      Optic Luxe combines AR try-on, unified online/offline sales, real-time inventory, and full order lifecycle management — all in one platform built with modern web technologies.
+    </p>
+    <div class="cols-3 animate d4" style="margin-bottom:32px">
+      <div class="card" style="text-align:center;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">🕶️</div>
+        <div style="font-size:14px;font-weight:600">AR Try-On</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">Webcam-based virtual fitting</div>
+      </div>
+      <div class="card" style="text-align:center;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">🏪</div>
+        <div style="font-size:14px;font-weight:600">Unified POS</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">Online + walk-in in one system</div>
+      </div>
+      <div class="card" style="text-align:center;padding:20px">
+        <div style="font-size:28px;margin-bottom:8px">📦</div>
+        <div style="font-size:14px;font-weight:600">Smart Inventory</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">Real-time stock with audit trail</div>
+      </div>
+    </div>
+    <div class="animate d5">
+      <div class="cta-group" style="justify-content:center">
+        <a href="#" class="btn-cta btn-primary">View Live Demo →</a>
+        <a href="#" class="btn-cta btn-secondary">GitHub Repository</a>
+      </div>
+      <div style="margin-top:32px;color:var(--text3);font-size:13px">
+        <p>Built with Next.js · Express · Prisma · PostgreSQL · Three.js · MediaPipe</p>
+        <p style="margin-top:8px;font-size:12px">Questions? Reach out at <span style="color:var(--accent2)">team@opticluxe.com</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /deck -->
+
+<!-- ── Navigation Controls ── -->
+<div class="nav">
+  <button id="prevBtn" onclick="navigate(-1)" disabled>‹</button>
+  <div class="dots" id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 6</span>
+  <button id="nextBtn" onclick="navigate(1)">›</button>
+</div>
+
+<script>
+(function(){
+  const slides=document.querySelectorAll('.slide');
+  const total=slides.length;
+  let current=0;
+  let transitioning=false;
+
+  function updateUI(){
+    document.getElementById('counter').textContent=(current+1)+' / '+total;
+    document.getElementById('prevBtn').disabled=(current===0);
+    document.getElementById('nextBtn').disabled=(current===total-1);
+    document.getElementById('progress').style.width=(((current+1)/total)*100)+'%';
+    var dots=document.querySelectorAll('.dot');
+    for(var i=0;i<dots.length;i++) dots[i].classList.toggle('active',i===current);
+  }
+
+  function goTo(n){
+    if(n<0||n>=total||n===current||transitioning)return;
+    transitioning=true;
+    var prev=slides[current];
+    var next=slides[n];
+    prev.classList.remove('active');
+    prev.classList.add('exit-left');
+    next.classList.add('active');
+    current=n;
+    updateUI();
+    setTimeout(function(){prev.classList.remove('exit-left');transitioning=false;},500);
+  }
+
+  window.navigate=function(dir){goTo(current+dir)};
+
+  // Build dots
+  var dotsEl=document.getElementById('dots');
+  for(var i=0;i<total;i++){
+    var d=document.createElement('button');
+    d.className='dot'+(i===0?' active':'');
+    d.setAttribute('data-i',i);
+    d.onclick=function(){goTo(parseInt(this.getAttribute('data-i')))};
+    dotsEl.appendChild(d);
+  }
+
+  // Keyboard
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();window.navigate(1);}
+    if(e.key==='ArrowLeft'){e.preventDefault();window.navigate(-1);}
+  });
+
+  // Touch swipe
+  var touchX=0;
+  document.addEventListener('touchstart',function(e){touchX=e.touches[0].clientX;});
+  document.addEventListener('touchend',function(e){
+    var dx=e.changedTouches[0].clientX-touchX;
+    if(Math.abs(dx)>50)window.navigate(dx<0?1:-1);
+  });
+
+  // Init — first slide is already visible via HTML class, just sync UI
+  updateUI();
+})();
+</script>
+</body>
+</html>
