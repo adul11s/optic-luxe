@@ -99,7 +99,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-brand-100">
         <div className="container-wide">
           <motion.div
             initial="hidden"

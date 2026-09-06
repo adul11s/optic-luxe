@@ -170,7 +170,7 @@ export default function POSPage() {
                   leftIcon={<Search className="w-4 h-4" />}
                 />
                 {isSearchOpen && searchTerm && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-brand-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-brand-100 border border-brand-200 rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
                     {products.length > 0 ? (
                       products.slice(0, 20).map((p: any) => (
                         <button

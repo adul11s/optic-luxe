@@ -166,7 +166,7 @@ export default function WarehouseDashboardPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {alertItems.map((a: AlertItem) => (
-                <div key={a.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-amber-200">
+                <div key={a.id} className="flex items-center gap-3 p-3 bg-brand-100 rounded-xl border border-amber-200">
                   <div className={`w-2 h-2 rounded-full ${a.severity === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-brand-950 text-sm truncate">{a.product?.name}</p>

@@ -116,7 +116,7 @@ function FeaturedCollections() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-brand-100">
       <div className="container-wide">
         <motion.div
           initial="hidden"
@@ -347,7 +347,7 @@ function BestSellers() {
 
 function BrandStory() {
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-brand-100">
       <div className="container-wide">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div
@@ -451,7 +451,7 @@ function Features() {
               }}
               className="text-center"
             >
-              <div className="inline-flex items-center justify-center w-14 h-14 bg-white rounded-2xl shadow-sm text-accent-gold mb-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-brand-100 rounded-2xl shadow-sm text-accent-gold mb-4">
                 {feature.icon}
               </div>
               <h3 className="font-semibold text-brand-950 mb-1">{feature.title}</h3>
@@ -487,7 +487,7 @@ function Testimonials() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-20 bg-brand-100">
       <div className="container-wide">
         <motion.div
           initial="hidden"

@@ -22,7 +22,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-brand-100">
+      <header className="sticky top-0 z-40 bg-brand-100/80 backdrop-blur-md border-b border-brand-100">
         <nav className="container-wide flex items-center justify-between h-16 md:h-20">
           <div className="flex items-center gap-8">
             <Link href="/home" className="text-2xl font-serif font-semibold text-brand-950">
@@ -48,9 +48,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <button className="p-2 text-brand-600 hover:text-brand-950 transition-colors">
+            <Link
+              href="/shop"
+              aria-label="Search"
+              className="p-2 text-brand-600 hover:text-brand-950 transition-colors"
+            >
               <Search className="w-5 h-5" />
-            </button>
+            </Link>
 
             <Link
               href="/wishlist"
@@ -95,7 +99,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white border-t border-brand-100">
+          <div className="md:hidden bg-brand-100 border-t border-brand-100">
             <div className="container-wide py-4 space-y-2">
               {navigation.map((item) => (
                 <Link
