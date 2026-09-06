@@ -17,6 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("optic-luxe-theme");var dark=t!=="light";if(dark)document.documentElement.classList.add("dark");}catch(e){document.documentElement.classList.add("dark");}})();`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
