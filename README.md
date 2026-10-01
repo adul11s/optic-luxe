@@ -54,7 +54,7 @@ npm run dev                  # http://localhost:3001
 cd ../client
 cp .env.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:3001/api
 npm install
-npm run dev                  # http://localhost:3001
+npm run dev                  # http://localhost:3000
 ```
 
 ### Test Accounts
