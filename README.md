@@ -10,7 +10,7 @@ A full-stack optical e-commerce platform with virtual AR try-on, unified online/
   numbers); security posture documented in [`docs/threat-model.md`](docs/threat-model.md).
 - Rate-limited login (5 attempts / 5 min per IP → 429), role-based access control,
   and audit logs on every sensitive admin action.
-- 57/57 tests passing (unit + DB-backed integration): oversell race (parallel checkouts on the last unit),
+- 65/65 tests passing (unit + DB-backed integration): oversell race (parallel checkouts on the last unit),
   stock reservation/refund, POS sale/inventory movements, role matrix, rate limit, audit.
 
 ## Features Overview
@@ -32,7 +32,7 @@ A full-stack optical e-commerce platform with virtual AR try-on, unified online/
 | Backend | Express.js, TypeScript |
 | Database | PostgreSQL + Prisma ORM (27 models) |
 | Auth | JWT (7-day expiry), bcrypt (12 rounds) |
-| Testing | Vitest (57 tests passing — unit + DB-backed integration) |
+| Testing | Vitest (65 tests passing — unit + DB-backed integration) |
 
 ## Getting Started
 
@@ -138,7 +138,7 @@ optic-luxe/
 │   │   └── dashboard/             # Stats, analytics
 │   ├── src/middleware/             # Auth, role, validation, audit, error handler
 │   ├── src/core/                  # Database, utils, services
-│   ├── src/__tests__/             # Tests (57 passing, incl. DB integration)
+│   ├── src/__tests__/             # Tests (65 passing, incl. DB integration)
 │   └── prisma/schema.prisma       # 27 database models
 │
 ├── docs/notes/                    # SPEC, DEV guide, user guide, demo, journey

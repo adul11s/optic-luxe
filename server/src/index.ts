@@ -19,6 +19,7 @@ import refundRouter from './modules/refund/refund.routes.js';
 import siteConfigRouter from './modules/site-config/site-config.routes.js';
 import auditRouter from './modules/audit/audit.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { metricsMiddleware, snapshotMetrics } from './middleware/metrics.js';
 import { getJwtSecret } from './core/utils/jwt.js';
 
 // Fail fast on startup when JWT_SECRET is missing — never run with a guessable secret.
@@ -41,6 +42,13 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '10mb' }));
+
+// In-process metrics recording (counters + latency ring buffer) + snapshot endpoint.
+app.use(metricsMiddleware);
+app.get('/metrics', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ...snapshotMetrics(), timestamp: new Date().toISOString() });
+});
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
