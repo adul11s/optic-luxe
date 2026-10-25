@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
 import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 import { generateSlug } from '../../core/utils/slug.js';
+import { logAudit } from '../../middleware/audit.js';
 import { z } from 'zod';
 
 const productQuerySchema = z.object({
@@ -103,6 +104,8 @@ export async function createProduct(req: Request, res: Response) {
       include: { images: true, variants: true, category: true },
     });
 
+    await logAudit(req.user?.userId, 'CREATE', 'Product', product.id, undefined, { name: product.name, sku: product.sku, basePrice: product.basePrice });
+
     return sendSuccess(res, product, 'Product created', 201);
   } catch (error: any) {
     return sendError(res, error.message, 500);
@@ -116,7 +119,13 @@ export async function updateProduct(req: Request, res: Response) {
     if (data.name) data.slug = generateSlug(data.name) + '-' + Date.now().toString(36);
     data.updatedBy = req.user?.userId;
 
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing) return sendError(res, 'Product not found', 404);
+
     const product = await prisma.product.update({ where: { id }, data, include: { images: true, variants: true, category: true } });
+
+    await logAudit(req.user?.userId, 'UPDATE', 'Product', id, { name: existing.name, basePrice: existing.basePrice, isActive: existing.isActive }, { name: product.name, basePrice: product.basePrice, isActive: product.isActive });
+
     return sendSuccess(res, product, 'Product updated');
   } catch (error: any) {
     return sendError(res, error.message, 500);
@@ -126,6 +135,7 @@ export async function updateProduct(req: Request, res: Response) {
 export async function deleteProduct(req: Request, res: Response) {
   try {
     await prisma.product.update({ where: { id: req.params.id }, data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.user?.userId } });
+    await logAudit(req.user?.userId, 'DELETE', 'Product', req.params.id);
     return sendSuccess(res, null, 'Product deleted');
   } catch (error: any) {
     return sendError(res, error.message, 500);

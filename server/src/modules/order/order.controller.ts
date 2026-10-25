@@ -4,6 +4,8 @@ import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response
 import { generateOrderNumber } from '../../core/utils/slug.js';
 import { reserveStock, releaseReservation, batchCheckStock } from '../../core/services/inventory.service.js';
 import { InsufficientStockError, ConcurrentUpdateError } from '../../core/services/inventory.service.js';
+import { logAudit } from '../../middleware/audit.js';
+import { orderLogger } from '../../core/utils/logger.js';
 
 export async function createOrder(req: Request, res: Response) {
   try {
@@ -83,6 +85,10 @@ export async function createOrder(req: Request, res: Response) {
     });
 
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+    orderLogger.info({ event: 'order.created', orderNumber: order.orderNumber, orderId: order.id, userId: req.user!.userId, totalAmount: order.totalAmount, itemCount: cart.items.length }, 'Order created');
+
+    await logAudit(req.user!.userId, 'CREATE', 'Order', order.id, undefined, { orderNumber: order.orderNumber, totalAmount: order.totalAmount, itemCount: cart.items.length });
 
     return sendSuccess(res, order, 'Order created', 201);
   } catch (error: any) {
@@ -200,6 +206,10 @@ export async function updateOrderStatus(req: Request, res: Response) {
       data: updateData,
       include: { items: true, payment: true, shipment: true },
     });
+
+    orderLogger.info({ event: 'order.status_changed', orderNumber: order.orderNumber, orderId: order.id, from: previousStatus, to: status, byUserId: req.user!.userId }, `Order status updated to ${status}`);
+
+    await logAudit(req.user!.userId, 'STATUS_CHANGE', 'Order', order.id, { status: previousStatus }, { status });
 
     return sendSuccess(res, updated, `Order status updated to ${status}`);
   } catch (error: any) {

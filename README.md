@@ -4,6 +4,16 @@ A full-stack optical e-commerce platform with virtual AR try-on, unified online/
 
 ## Highlights
 
+- ❗ **Demo status & known gaps:** video walkthrough is *coming next*; AR FPS/
+  model-load benchmark is a TODO (needs a real headless browser run — no fabricated
+  numbers); security posture documented in [`docs/threat-model.md`](docs/threat-model.md).
+- Rate-limited login (5 attempts / 5 min per IP → 429), role-based access control,
+  and audit logs on every sensitive admin action.
+- 55/55 tests passing (unit + DB-backed integration): stock reservation/refund,
+  POS sale/inventory movements, role matrix, rate limit, audit.
+
+## Features Overview
+
 - **AR Virtual Try-On** — Webcam-based 3D glasses fitting using Three.js + MediaPipe
 - **Point of Sale** — Walk-in sales with receipts, customer lookup, and stock sync
 - **Unified Inventory** — Real-time stock across online and offline channels

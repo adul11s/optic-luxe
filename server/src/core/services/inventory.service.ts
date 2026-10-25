@@ -1,4 +1,5 @@
 import { prisma } from '../database/prisma.js';
+import { inventoryLogger } from '../utils/logger.js';
 
 export class InsufficientStockError extends Error {
   constructor(variantId: string, requested: number, available: number) {
@@ -98,6 +99,11 @@ export async function reserveStock({ orderId, items, ttlMinutes = 30 }: ReserveS
         })
       )
   );
+
+  for (const item of items) {
+    if (!item.variantId) continue;
+    inventoryLogger.info({ event: 'inventory.reserved', variantId: item.variantId, quantity: item.quantity, orderId, ttlMinutes }, 'Stock reserved');
+  }
 }
 
 /**
@@ -254,6 +260,8 @@ export async function restoreStock(variantId: string, quantity: number, reason: 
       },
     }),
   ]);
+
+  inventoryLogger.info({ event: 'inventory.restored', variantId, quantity, newStock, reference, referenceId }, 'Stock restored');
 }
 
 /**

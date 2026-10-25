@@ -17,6 +17,7 @@ import warehouseRouter from './modules/warehouse/warehouse.routes.js';
 import posRouter from './modules/pos/pos.routes.js';
 import refundRouter from './modules/refund/refund.routes.js';
 import siteConfigRouter from './modules/site-config/site-config.routes.js';
+import auditRouter from './modules/audit/audit.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { getJwtSecret } from './core/utils/jwt.js';
 
@@ -65,6 +66,7 @@ app.use('/api/warehouse', warehouseRouter);
 app.use('/api/pos', posRouter);
 app.use('/api/refunds', refundRouter);
 app.use('/api/site-config', siteConfigRouter);
+app.use('/api/audit', auditRouter);
 
 app.use(errorHandler);
 
