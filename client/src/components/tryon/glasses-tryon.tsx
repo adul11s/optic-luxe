@@ -432,23 +432,12 @@ export function GlassesTryOn({
         {cameraStatus === 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80">
             <p className="text-red-400 text-sm text-center px-8">{errorMessage}</p>
-            <p className="mt-2 text-white/60 text-xs text-center px-8">
-              Demo tip: use Chrome on localhost/HTTPS, allow camera, check connection for face-model CDN.
-            </p>
             <button
               onClick={initCamera}
               className="mt-4 px-6 py-2 bg-white text-black rounded-xl text-sm font-medium"
             >
-              Retry camera
+              Retry
             </button>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="mt-2 px-6 py-2 bg-transparent border border-white/30 text-white rounded-xl text-sm"
-              >
-                Back to product photos
-              </button>
-            )}
           </div>
         )}
 

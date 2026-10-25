@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: optic
+      POSTGRES_PASSWORD: optic
+      POSTGRES_DB: optic_luxe
+    ports:
+      - "5433:5432"
+    volumes:
+      - optic_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optic -d optic_luxe"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build:
+      context: ./server
+    environment:
+      DATABASE_URL: postgresql://optic:optic@db:5432/optic_luxe
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRES_IN: 7d
+      CLIENT_URL: http://localhost:3000
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: ./client
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+
+volumes:
+  optic_pgdata:

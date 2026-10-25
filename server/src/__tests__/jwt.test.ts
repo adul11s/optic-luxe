@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateToken, verifyToken } from '../core/utils/jwt.js';
+import { generateToken, verifyToken, getJwtSecret } from '../core/utils/jwt.js';
 
 describe('JWT Utils', () => {
   const testPayload = {
@@ -39,6 +39,29 @@ describe('JWT Utils', () => {
       const jwt = require('jsonwebtoken');
       const wrongToken = jwt.sign(testPayload, 'wrong-secret');
       expect(() => verifyToken(wrongToken)).toThrow();
+    });
+  });
+
+  describe('fail-fast secret handling', () => {
+    it('should throw when JWT_SECRET is not set', () => {
+      const original = process.env.JWT_SECRET;
+      delete process.env.JWT_SECRET;
+      try {
+        expect(() => getJwtSecret()).toThrow(/JWT_SECRET is not set/);
+        expect(() => generateToken(testPayload)).toThrow(/JWT_SECRET is not set/);
+      } finally {
+        process.env.JWT_SECRET = original;
+      }
+    });
+
+    it('should treat whitespace-only JWT_SECRET as missing', () => {
+      const original = process.env.JWT_SECRET;
+      process.env.JWT_SECRET = '   ';
+      try {
+        expect(() => getJwtSecret()).toThrow(/JWT_SECRET is not set/);
+      } finally {
+        process.env.JWT_SECRET = original;
+      }
     });
   });
 });

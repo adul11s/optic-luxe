@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../core/database/prisma.js';
 import { sendSuccess, sendError, sendPaginated } from '../../core/utils/response.js';
 import { generateOrderNumber, generateInvoiceNumber } from '../../core/utils/slug.js';
+import { logAudit } from '../../middleware/audit.js';
 
 // ── Create Offline Sale (POS) ──
 
@@ -18,7 +19,6 @@ export async function createOfflineSale(req: Request, res: Response) {
     const saleNumber = await generateOrderNumber();
     let subtotal = 0;
 
-    // Validate stock and calculate totals within a transaction
     const sale = await prisma.$transaction(async (tx) => {
       const orderItems: { productId: string; variantId?: string; quantity: number; unitPrice: number; totalPrice: number }[] = [];
 
@@ -32,7 +32,7 @@ export async function createOfflineSale(req: Request, res: Response) {
 
         await tx.productVariant.update({ where: { id: variant.id }, data: { stockQty: { decrement: item.quantity } } });
         await tx.inventoryMovement.create({
-          data: { variantId: variant.id, type: 'SOLD_OFFLINE', quantity: -item.quantity, balanceAfter: variant.stockQty - item.quantity, reference: saleNumber, performedBy: cashierId!, notes: `POS sale ${saleNumber}` },
+          data: { variantId: variant.id, type: 'SOLD_OFFLINE', quantity: -item.quantity, balanceAfter: variant.stockQty - item.quantity, referenceId: variant.id, reference: saleNumber, performedBy: cashierId!, notes: `POS sale ${saleNumber}` },
         });
 
         orderItems.push({ productId: variant.productId, variantId: variant.id, quantity: item.quantity, unitPrice, totalPrice });
@@ -51,6 +51,8 @@ export async function createOfflineSale(req: Request, res: Response) {
         include: { items: { include: { product: true, variant: true } } },
       });
     });
+
+    await logAudit(cashierId, 'POS_SALE', 'OfflineSale', sale.id, undefined, JSON.stringify({ saleNumber, totalAmount: sale.totalAmount, itemCount: items.length }));
 
     sendSuccess(res, sale, 'Offline sale completed');
   } catch (error: any) {
