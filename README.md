@@ -21,7 +21,7 @@ A full-stack optical e-commerce platform with virtual AR try-on, unified online/
 | Backend | Express.js, TypeScript |
 | Database | PostgreSQL + Prisma ORM (27 models) |
 | Auth | JWT (7-day expiry), bcrypt (12 rounds) |
-| Testing | Vitest (36 tests passing) |
+| Testing | Vitest (44 tests passing — unit + DB-backed integration) |
 
 ## Getting Started
 
@@ -54,7 +54,7 @@ npm run dev                  # http://localhost:3001
 cd ../client
 cp .env.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:3001/api
 npm install
-npm run dev                  # http://localhost:3001
+npm run dev                  # http://localhost:3000
 ```
 
 ### Test Accounts
@@ -127,11 +127,12 @@ optic-luxe/
 │   │   └── dashboard/             # Stats, analytics
 │   ├── src/middleware/             # Auth, role, validation, audit, error handler
 │   ├── src/core/                  # Database, utils, services
-│   ├── src/__tests__/             # Unit tests (36 passing)
+│   ├── src/__tests__/             # Tests (44 passing, incl. DB integration)
 │   └── prisma/schema.prisma       # 27 database models
 │
-├── presentation.html              # Slide deck
-├── USER_GUIDE.md                  # End-user guide
+├── docs/notes/                    # SPEC, DEV guide, user guide, demo, journey
+│   └── presentation.html          # Slide deck
+├── docker-compose.yml             # Postgres + server + client (untested¹)
 └── README.md                      # This file
 ```
 
@@ -166,7 +167,7 @@ npm test                     # Run all unit tests
 npm run test:watch           # Watch mode
 ```
 
-**Coverage:** JWT utils, response helpers, slug generation, auth middleware, role middleware.
+**Coverage:** JWT utils (incl. fail-fast on missing `JWT_SECRET`), response helpers, slug generation, auth middleware, role middleware, plus **DB-backed integration tests**: checkout reserves stock, refund restores stock, POS sale decrements stock and records an `InventoryMovement`, POS refund restores stock, STAFF denied on ADMIN-only endpoints, unauthenticated requests rejected.
 
 ## Order Lifecycle
 

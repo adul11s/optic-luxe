@@ -170,32 +170,33 @@ function buildCatalog(menId: string, womenId: string, unisexId: string, kidsId: 
 async function main() {
   console.log('Seeding Optic Luxe database...');
 
-  await prisma.auditLog.deleteMany();
-  await prisma.wishlistItem.deleteMany();
-  await prisma.reviewImage.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
+  await prisma.refundItem.deleteMany();
   await prisma.shipmentHistory.deleteMany();
   await prisma.shipment.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
-  await prisma.address.deleteMany();
-  await prisma.productVariantImage.deleteMany();
-  await prisma.productImage.deleteMany();
-  await prisma.productVariant.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.staff.deleteMany();
-  await prisma.siteConfig.deleteMany();
-  await prisma.user.deleteMany();
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
   await prisma.offlineSaleItem.deleteMany();
   await prisma.offlineSale.deleteMany();
   await prisma.procurementItem.deleteMany();
   await prisma.procurement.deleteMany();
   await prisma.inventoryMovement.deleteMany();
+  await prisma.reviewImage.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.wishlistItem.deleteMany();
+  await prisma.productVariantImage.deleteMany();
+  await prisma.productImage.deleteMany();
+  await prisma.productVariant.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.staff.deleteMany();
+  await prisma.siteConfig.deleteMany();
+  await prisma.user.deleteMany();
 
   const hashedPassword = await bcrypt.hash('password123', 12);
 

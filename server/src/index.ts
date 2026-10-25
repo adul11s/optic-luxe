@@ -18,6 +18,10 @@ import posRouter from './modules/pos/pos.routes.js';
 import refundRouter from './modules/refund/refund.routes.js';
 import siteConfigRouter from './modules/site-config/site-config.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { getJwtSecret } from './core/utils/jwt.js';
+
+// Fail fast on startup when JWT_SECRET is missing — never run with a guessable secret.
+getJwtSecret();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

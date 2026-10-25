@@ -33,6 +33,8 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"description" | "reviews">("description");
 
+  const tryOnEnabled = process.env.NEXT_PUBLIC_TRYON_ENABLED === "true";
+
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: () => api.get<{ data: Product }>(`/products/${slug}`),
@@ -96,14 +98,16 @@ export default function ProductDetailPage() {
               {p.discountPrice && <Badge className="absolute top-4 right-4" variant="danger">Sale</Badge>}
               
               {/* Try On Button */}
-              <Button
-                className="absolute bottom-4 left-4"
-                size="sm"
-                leftIcon={<ScanFace className="w-4 h-4" />}
-                onClick={() => setShowTryOn(true)}
-              >
-                Try On
-              </Button>
+              {tryOnEnabled && (
+                <Button
+                  className="absolute bottom-4 left-4"
+                  size="sm"
+                  leftIcon={<ScanFace className="w-4 h-4" />}
+                  onClick={() => setShowTryOn(true)}
+                >
+                  Try On
+                </Button>
+              )}
             </div>
 
             {images.length > 1 && (
@@ -209,7 +213,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Render the Modal */}
-      {showTryOn && p && (
+      {tryOnEnabled && showTryOn && p && (
         <TryOnModal
           product={p}
           variantId={selectedVariant || (variants[0]?.id ?? '')}
