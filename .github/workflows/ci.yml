@@ -8,6 +8,23 @@ on:
 jobs:
   server:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: optic_luxe_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/optic_luxe_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/optic_luxe_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +37,9 @@ jobs:
         working-directory: server
       - name: Prisma generate
         run: npx prisma generate
+        working-directory: server
+      - name: Push schema to test DB
+        run: npx prisma db push --skip-generate
         working-directory: server
       - name: Typecheck (tsc --noEmit)
         run: npx tsc --noEmit
