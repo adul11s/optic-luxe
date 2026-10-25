@@ -1,4 +1,5 @@
 # Optic Luxe — Premium Optical E-Commerce Platform
+[![CI](https://github.com/adul11s/optic-luxe/actions/workflows/ci.yml/badge.svg)](https://github.com/adul11s/optic-luxe/actions/workflows/ci.yml)
 
 A full-stack optical e-commerce platform with virtual AR try-on, unified online/offline sales, real-time inventory management, and a complete order-to-delivery pipeline.
 
