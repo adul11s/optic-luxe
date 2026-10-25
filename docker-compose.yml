@@ -20,6 +20,7 @@ services:
       context: ./server
     environment:
       DATABASE_URL: postgresql://optic:optic@db:5432/optic_luxe
+      # LOCAL-ONLY — ganti wajib di prod
       JWT_SECRET: change-me-in-production
       JWT_EXPIRES_IN: 7d
       CLIENT_URL: http://localhost:3000
